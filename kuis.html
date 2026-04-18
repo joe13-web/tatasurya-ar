@@ -1,0 +1,759 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Kuis Tata Surya</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Segoe UI', Arial, sans-serif;
+      background: #050520;
+      color: white;
+      min-height: 100vh;
+    }
+
+    /* Bintang latar */
+    .stars { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 0; }
+    .star { position: absolute; background: white; border-radius: 50%; animation: twinkle 3s infinite alternate; }
+    @keyframes twinkle { 0% { opacity: 0.2; } 100% { opacity: 1; } }
+
+    .container {
+      position: relative;
+      z-index: 1;
+      max-width: 480px;
+      margin: 0 auto;
+      padding: 20px;
+      min-height: 100vh;
+    }
+
+    /* Header */
+    .header-back {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+
+    .btn-back {
+      background: rgba(255,255,255,0.1);
+      border: 1px solid rgba(255,255,255,0.2);
+      color: white;
+      padding: 8px 16px;
+      border-radius: 10px;
+      cursor: pointer;
+      font-size: 14px;
+      text-decoration: none;
+      transition: background 0.2s;
+    }
+    .btn-back:hover { background: rgba(255,255,255,0.2); }
+
+    /* Progress bar */
+    .progress-area {
+      margin-bottom: 18px;
+    }
+
+    .progress-info {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+
+    .progress-info span {
+      font-size: 13px;
+      color: #aaaacc;
+    }
+
+    .timer {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(255,100,100,0.15);
+      border: 1px solid rgba(255,100,100,0.3);
+      border-radius: 20px;
+      padding: 4px 12px;
+      font-size: 13px;
+      font-weight: 700;
+      color: #ff8888;
+    }
+
+    .progress-bar-bg {
+      height: 6px;
+      background: rgba(255,255,255,0.1);
+      border-radius: 10px;
+      overflow: hidden;
+    }
+
+    .progress-bar-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #4fc3f7, #7c4dff);
+      border-radius: 10px;
+      transition: width 0.4s ease;
+    }
+
+    /* Skor kecil */
+    .skor-bar {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 18px;
+    }
+
+    .skor-item {
+      background: rgba(20,20,80,0.8);
+      border: 1px solid rgba(100,120,255,0.3);
+      border-radius: 10px;
+      padding: 8px 14px;
+      text-align: center;
+      flex: 1;
+      margin: 0 4px;
+    }
+
+    .skor-item:first-child { margin-left: 0; }
+    .skor-item:last-child { margin-right: 0; }
+
+    .skor-item .val {
+      font-size: 20px;
+      font-weight: 700;
+    }
+
+    .skor-item .lbl {
+      font-size: 10px;
+      color: #8888aa;
+      margin-top: 2px;
+    }
+
+    .val-benar { color: #66dd88; }
+    .val-salah { color: #ff7766; }
+    .val-sisa  { color: #f0c040; }
+
+    /* Box soal */
+    .soal-box {
+      background: rgba(15,15,60,0.85);
+      border: 1px solid rgba(80,100,220,0.35);
+      border-radius: 18px;
+      padding: 24px 20px;
+      margin-bottom: 16px;
+    }
+
+    .kategori-badge {
+      display: inline-block;
+      background: rgba(100,130,255,0.15);
+      border: 1px solid rgba(100,130,255,0.35);
+      border-radius: 20px;
+      padding: 3px 12px;
+      font-size: 11px;
+      color: #aabbff;
+      margin-bottom: 14px;
+    }
+
+    .pertanyaan {
+      font-size: 16px;
+      line-height: 1.7;
+      color: white;
+      font-weight: 500;
+    }
+
+    /* Pilihan jawaban */
+    .pilihan-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+
+    .btn-pilihan {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      width: 100%;
+      padding: 14px 18px;
+      background: rgba(20,20,80,0.7);
+      border: 1px solid rgba(80,100,200,0.35);
+      border-radius: 12px;
+      color: white;
+      font-size: 14px;
+      cursor: pointer;
+      text-align: left;
+      transition: all 0.2s;
+    }
+
+    .btn-pilihan:hover:not(:disabled) {
+      background: rgba(60,60,160,0.8);
+      border-color: rgba(150,180,255,0.6);
+      transform: translateX(4px);
+    }
+
+    .btn-pilihan:disabled { cursor: not-allowed; }
+
+    .btn-pilihan.benar {
+      background: rgba(20,100,50,0.8) !important;
+      border-color: #44cc77 !important;
+    }
+
+    .btn-pilihan.salah {
+      background: rgba(120,30,30,0.8) !important;
+      border-color: #cc4444 !important;
+    }
+
+    .huruf-opsi {
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      background: rgba(100,130,255,0.2);
+      border: 1px solid rgba(100,130,255,0.4);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      font-weight: 700;
+      color: #aabbff;
+      flex-shrink: 0;
+    }
+
+    .benar .huruf-opsi { background: rgba(50,180,100,0.3); border-color: #44cc77; color: #88ffaa; }
+    .salah .huruf-opsi { background: rgba(180,50,50,0.3); border-color: #cc4444; color: #ffaaaa; }
+
+    /* Feedback */
+    #feedback-box {
+      display: none;
+      background: rgba(15,15,50,0.9);
+      border-radius: 12px;
+      padding: 14px 18px;
+      font-size: 13px;
+      line-height: 1.6;
+      color: #ccccee;
+      margin-bottom: 16px;
+      border-left: 4px solid #44cc77;
+    }
+
+    #feedback-box.salah { border-left-color: #cc4444; }
+
+    #feedback-box strong {
+      display: block;
+      margin-bottom: 4px;
+    }
+
+    /* Tombol lanjut */
+    #btn-lanjut {
+      display: none;
+      width: 100%;
+      padding: 15px;
+      background: linear-gradient(135deg, #1a3a8a, #3a5add);
+      border: none;
+      border-radius: 12px;
+      color: white;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    #btn-lanjut:hover {
+      background: linear-gradient(135deg, #2a4aaa, #5a7aff);
+      transform: translateY(-2px);
+    }
+
+    /* Halaman hasil */
+    #halaman-hasil {
+      display: none;
+      text-align: center;
+      padding: 20px 0;
+    }
+
+    .hasil-icon {
+      font-size: 72px;
+      margin-bottom: 16px;
+    }
+
+    .hasil-judul {
+      font-size: 26px;
+      font-weight: 800;
+      color: #f0c040;
+      margin-bottom: 8px;
+    }
+
+    .hasil-sub {
+      font-size: 14px;
+      color: #aaaacc;
+      margin-bottom: 28px;
+    }
+
+    .nilai-besar {
+      font-size: 88px;
+      font-weight: 800;
+      line-height: 1;
+      margin-bottom: 6px;
+    }
+
+    .nilai-label {
+      font-size: 14px;
+      color: #aaaacc;
+      margin-bottom: 28px;
+    }
+
+    .grid-hasil {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 28px;
+    }
+
+    .kartu-hasil {
+      background: rgba(15,15,60,0.85);
+      border: 1px solid rgba(80,100,200,0.3);
+      border-radius: 12px;
+      padding: 16px 8px;
+      text-align: center;
+    }
+
+    .kartu-hasil .kh-val {
+      font-size: 28px;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+
+    .kartu-hasil .kh-lbl {
+      font-size: 11px;
+      color: #8888aa;
+    }
+
+    .pesan-hasil {
+      background: rgba(15,15,60,0.85);
+      border: 1px solid rgba(80,100,200,0.3);
+      border-radius: 14px;
+      padding: 18px 20px;
+      font-size: 14px;
+      line-height: 1.7;
+      color: #ccccee;
+      margin-bottom: 24px;
+      text-align: left;
+    }
+
+    .btn-aksi {
+      display: block;
+      width: 100%;
+      padding: 15px;
+      border-radius: 12px;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s;
+      margin-bottom: 12px;
+      border: none;
+      color: white;
+    }
+
+    .btn-ulangi {
+      background: linear-gradient(135deg, #1a3a8a, #3a5add);
+    }
+    .btn-ulangi:hover { background: linear-gradient(135deg, #2a4aaa, #5a7aff); }
+
+    .btn-menu {
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.2) !important;
+    }
+    .btn-menu:hover { background: rgba(255,255,255,0.15); }
+  </style>
+</head>
+<body>
+
+  <div class="stars" id="stars"></div>
+
+  <div class="container">
+
+    <!-- Halaman Soal -->
+    <div id="halaman-soal">
+      <div class="header-back">
+        <a href="index.html" class="btn-back">← Kembali</a>
+        <span style="font-size:18px; color:#f0c040; font-weight:700">📝 KUIS TATA SURYA</span>
+      </div>
+
+      <!-- Progress -->
+      <div class="progress-area">
+        <div class="progress-info">
+          <span id="label-nomor">Soal 1 dari 10</span>
+          <div class="timer" id="timer-box">⏱ <span id="waktu">15</span>s</div>
+        </div>
+        <div class="progress-bar-bg">
+          <div class="progress-bar-fill" id="progress-fill" style="width:10%"></div>
+        </div>
+      </div>
+
+      <!-- Mini skor -->
+      <div class="skor-bar">
+        <div class="skor-item">
+          <div class="val val-benar" id="mini-benar">0</div>
+          <div class="lbl">Benar</div>
+        </div>
+        <div class="skor-item">
+          <div class="val val-salah" id="mini-salah">0</div>
+          <div class="lbl">Salah</div>
+        </div>
+        <div class="skor-item">
+          <div class="val val-sisa" id="mini-sisa">10</div>
+          <div class="lbl">Sisa</div>
+        </div>
+      </div>
+
+      <!-- Soal -->
+      <div class="soal-box">
+        <span class="kategori-badge" id="kategori-badge">Pengetahuan Umum</span>
+        <p class="pertanyaan" id="pertanyaan-text">Soal akan muncul di sini...</p>
+      </div>
+
+      <!-- Pilihan -->
+      <div class="pilihan-list" id="pilihan-list"></div>
+
+      <!-- Feedback -->
+      <div id="feedback-box">
+        <strong id="feedback-judul">✅ Benar!</strong>
+        <span id="feedback-isi"></span>
+      </div>
+
+      <!-- Tombol Lanjut -->
+      <button id="btn-lanjut" onclick="lanjutSoal()">Lanjut →</button>
+    </div>
+
+    <!-- Halaman Hasil -->
+    <div id="halaman-hasil">
+      <div class="hasil-icon" id="hasil-icon">🏆</div>
+      <div class="hasil-judul" id="hasil-judul">Luar Biasa!</div>
+      <div class="hasil-sub" id="hasil-sub">Kamu berhasil menyelesaikan kuis</div>
+
+      <div class="nilai-besar" id="nilai-besar" style="color:#f0c040">100</div>
+      <div class="nilai-label">Nilai Akhir</div>
+
+      <div class="grid-hasil">
+        <div class="kartu-hasil">
+          <div class="kh-val" style="color:#66dd88" id="r-benar">0</div>
+          <div class="kh-lbl">Benar</div>
+        </div>
+        <div class="kartu-hasil">
+          <div class="kh-val" style="color:#ff7766" id="r-salah">0</div>
+          <div class="kh-lbl">Salah</div>
+        </div>
+        <div class="kartu-hasil">
+          <div class="kh-val" style="color:#aabbff" id="r-persen">0%</div>
+          <div class="kh-lbl">Akurasi</div>
+        </div>
+      </div>
+
+      <div class="pesan-hasil" id="pesan-hasil"></div>
+
+      <button class="btn-aksi btn-ulangi" onclick="ulangiKuis()">🔄 Ulangi Kuis</button>
+      <button class="btn-aksi btn-menu" onclick="location.href='index.html'">🏠 Menu Utama</button>
+    </div>
+
+  </div>
+
+  <script>
+    // =============================================
+    // DATA SOAL KUIS (10 soal)
+    // =============================================
+    const semuaSoal = [
+      {
+        kategori: "Ukuran Planet",
+        soal: "Planet terbesar dalam tata surya adalah?",
+        opsi: ["Saturnus", "Jupiter", "Uranus", "Neptunus"],
+        benar: 1,
+        penjelasan: "Jupiter adalah planet terbesar di tata surya, dengan diameter sekitar 139.820 km — lebih dari 11 kali diameter Bumi."
+      },
+      {
+        kategori: "Warna Planet",
+        soal: "Planet manakah yang dijuluki 'Planet Merah'?",
+        opsi: ["Venus", "Jupiter", "Mars", "Merkurius"],
+        benar: 2,
+        penjelasan: "Mars dijuluki Planet Merah karena permukaannya kaya kandungan besi oksida (karat) yang membuat warnanya tampak merah kecoklatan."
+      },
+      {
+        kategori: "Posisi Planet",
+        soal: "Planet terdekat dari Matahari adalah?",
+        opsi: ["Venus", "Bumi", "Mars", "Merkurius"],
+        benar: 3,
+        penjelasan: "Merkurius adalah planet yang paling dekat dengan Matahari, berjarak rata-rata sekitar 57,9 juta kilometer."
+      },
+      {
+        kategori: "Ciri Khas",
+        soal: "Planet yang terkenal memiliki cincin besar dan indah adalah?",
+        opsi: ["Uranus", "Neptunus", "Saturnus", "Jupiter"],
+        benar: 2,
+        penjelasan: "Saturnus terkenal dengan sistem cincinnya yang terdiri dari es dan batu berbatu, membentang hingga 282.000 km dari pusat planet."
+      },
+      {
+        kategori: "Jumlah Planet",
+        soal: "Berapa jumlah planet dalam tata surya kita saat ini?",
+        opsi: ["7", "8", "9", "10"],
+        benar: 1,
+        penjelasan: "Tata surya memiliki 8 planet: Merkurius, Venus, Bumi, Mars, Jupiter, Saturnus, Uranus, dan Neptunus. Pluto diklasifikasi ulang sebagai planet kerdil sejak 2006."
+      },
+      {
+        kategori: "Planet Bumi",
+        soal: "Berapa persen permukaan Bumi yang tertutup oleh air?",
+        opsi: ["50%", "60%", "70%", "80%"],
+        benar: 2,
+        penjelasan: "Sekitar 70% atau 2/3 permukaan Bumi tertutup oleh air, itulah mengapa Bumi tampak biru dari luar angkasa dan disebut 'Planet Biru'."
+      },
+      {
+        kategori: "Temperatur",
+        soal: "Planet terpanas di tata surya adalah?",
+        opsi: ["Merkurius", "Venus", "Mars", "Jupiter"],
+        benar: 1,
+        penjelasan: "Meski Merkurius lebih dekat ke Matahari, Venus adalah planet terpanas dengan suhu rata-rata 465°C karena efek rumah kaca ekstrem dari atmosfernya."
+      },
+      {
+        kategori: "Posisi Planet",
+        soal: "Planet terjauh dari Matahari dalam tata surya adalah?",
+        opsi: ["Uranus", "Saturnus", "Jupiter", "Neptunus"],
+        benar: 3,
+        penjelasan: "Neptunus adalah planet terjauh dari Matahari, berjarak sekitar 4,5 miliar km. Satu tahun di Neptunus setara 165 tahun di Bumi."
+      },
+      {
+        kategori: "Ciri Khas",
+        soal: "Planet yang berputar miring hampir 98 derajat pada porosnya adalah?",
+        opsi: ["Neptunus", "Saturnus", "Jupiter", "Uranus"],
+        benar: 3,
+        penjelasan: "Uranus memiliki kemiringan sumbu rotasi sebesar 97,77°, sehingga seolah-olah bergelinding di orbitnya. Akibatnya, musim di Uranus berlangsung selama 21 tahun Bumi."
+      },
+      {
+        kategori: "Revolusi Planet",
+        soal: "Planet mana yang membutuhkan waktu paling lama untuk mengelilingi Matahari?",
+        opsi: ["Saturnus", "Uranus", "Jupiter", "Neptunus"],
+        benar: 3,
+        penjelasan: "Neptunus membutuhkan waktu sekitar 164,8 tahun Bumi untuk satu kali mengelilingi Matahari karena jaraknya yang paling jauh dari Matahari."
+      }
+    ];
+
+    let soalAktif = [];
+    let indexSoal = 0;
+    let skorBenar = 0;
+    let skorSalah = 0;
+    let sudahJawab = false;
+    let intervalTimer = null;
+    let waktuSisa = 15;
+
+    // =============================================
+    // INISIALISASI KUIS
+    // =============================================
+    function inisialisasi() {
+      // Acak urutan soal
+      soalAktif = [...semuaSoal].sort(() => Math.random() - 0.5);
+      indexSoal = 0;
+      skorBenar = 0;
+      skorSalah = 0;
+
+      document.getElementById('halaman-soal').style.display = 'block';
+      document.getElementById('halaman-hasil').style.display = 'none';
+
+      tampilSoal();
+    }
+
+    function tampilSoal() {
+      if (indexSoal >= soalAktif.length) {
+        tampilHasil();
+        return;
+      }
+
+      sudahJawab = false;
+      const soal = soalAktif[indexSoal];
+
+      // Update progress
+      const persen = ((indexSoal + 1) / soalAktif.length) * 100;
+      document.getElementById('progress-fill').style.width = persen + '%';
+      document.getElementById('label-nomor').textContent =
+        `Soal ${indexSoal + 1} dari ${soalAktif.length}`;
+
+      // Mini skor
+      document.getElementById('mini-benar').textContent = skorBenar;
+      document.getElementById('mini-salah').textContent = skorSalah;
+      document.getElementById('mini-sisa').textContent = soalAktif.length - indexSoal;
+
+      // Soal
+      document.getElementById('kategori-badge').textContent = soal.kategori;
+      document.getElementById('pertanyaan-text').textContent = soal.soal;
+
+      // Render pilihan
+      const list = document.getElementById('pilihan-list');
+      list.innerHTML = '';
+      const huruf = ['A', 'B', 'C', 'D'];
+
+      soal.opsi.forEach((opsi, i) => {
+        const btn = document.createElement('button');
+        btn.className = 'btn-pilihan';
+        btn.innerHTML = `
+          <div class="huruf-opsi">${huruf[i]}</div>
+          <span>${opsi}</span>
+        `;
+        btn.onclick = () => pilihJawaban(i);
+        list.appendChild(btn);
+      });
+
+      // Sembunyikan feedback dan tombol lanjut
+      document.getElementById('feedback-box').style.display = 'none';
+      document.getElementById('btn-lanjut').style.display = 'none';
+
+      // Mulai timer
+      mulaiTimer();
+    }
+
+    // =============================================
+    // TIMER
+    // =============================================
+    function mulaiTimer() {
+      waktuSisa = 15;
+      document.getElementById('waktu').textContent = waktuSisa;
+      document.getElementById('timer-box').style.color = '#ff8888';
+
+      clearInterval(intervalTimer);
+      intervalTimer = setInterval(() => {
+        waktuSisa--;
+        document.getElementById('waktu').textContent = waktuSisa;
+
+        if (waktuSisa <= 5) {
+          document.getElementById('timer-box').style.color = '#ff4444';
+        }
+
+        if (waktuSisa <= 0) {
+          clearInterval(intervalTimer);
+          if (!sudahJawab) {
+            // Waktu habis = salah
+            waktuHabis();
+          }
+        }
+      }, 1000);
+    }
+
+    function waktuHabis() {
+      sudahJawab = true;
+      skorSalah++;
+
+      const soal = soalAktif[indexSoal];
+      const tombol = document.querySelectorAll('.btn-pilihan');
+
+      tombol.forEach(btn => btn.disabled = true);
+      tombol[soal.benar].classList.add('benar');
+
+      tampilFeedback(false, 'Waktu habis! ' + soal.penjelasan);
+    }
+
+    // =============================================
+    // PILIH JAWABAN
+    // =============================================
+    function pilihJawaban(index) {
+      if (sudahJawab) return;
+      sudahJawab = true;
+      clearInterval(intervalTimer);
+
+      const soal = soalAktif[indexSoal];
+      const tombol = document.querySelectorAll('.btn-pilihan');
+
+      tombol.forEach(btn => btn.disabled = true);
+
+      if (index === soal.benar) {
+        skorBenar++;
+        tombol[index].classList.add('benar');
+        tampilFeedback(true, soal.penjelasan);
+      } else {
+        skorSalah++;
+        tombol[index].classList.add('salah');
+        tombol[soal.benar].classList.add('benar');
+        tampilFeedback(false, soal.penjelasan);
+      }
+    }
+
+    function tampilFeedback(benar, penjelasan) {
+      const box = document.getElementById('feedback-box');
+      const judul = document.getElementById('feedback-judul');
+      const isi = document.getElementById('feedback-isi');
+
+      if (benar) {
+        box.className = '';
+        box.style.borderLeftColor = '#44cc77';
+        judul.textContent = '✅ Jawaban Benar!';
+        judul.style.color = '#66dd88';
+      } else {
+        box.style.borderLeftColor = '#cc4444';
+        judul.textContent = '❌ Jawaban Salah!';
+        judul.style.color = '#ff7766';
+      }
+
+      isi.textContent = penjelasan;
+      box.style.display = 'block';
+      document.getElementById('btn-lanjut').style.display = 'block';
+
+      const isLast = indexSoal >= soalAktif.length - 1;
+      document.getElementById('btn-lanjut').textContent =
+        isLast ? '📊 Lihat Hasil' : 'Lanjut →';
+    }
+
+    function lanjutSoal() {
+      indexSoal++;
+      tampilSoal();
+    }
+
+    // =============================================
+    // HASIL AKHIR
+    // =============================================
+    function tampilHasil() {
+      clearInterval(intervalTimer);
+      document.getElementById('halaman-soal').style.display = 'none';
+      document.getElementById('halaman-hasil').style.display = 'block';
+
+      const total = soalAktif.length;
+      const nilai = Math.round((skorBenar / total) * 100);
+      const persen = Math.round((skorBenar / total) * 100);
+
+      document.getElementById('nilai-besar').textContent = nilai;
+      document.getElementById('r-benar').textContent = skorBenar;
+      document.getElementById('r-salah').textContent = skorSalah;
+      document.getElementById('r-persen').textContent = persen + '%';
+
+      let icon, judul, sub, pesan, warnaKilai;
+
+      if (nilai >= 90) {
+        icon = '🏆'; judul = 'Luar Biasa!'; sub = 'Nilai sempurna!';
+        warnaKilai = '#f0c040';
+        pesan = `Selamat! Kamu mendapat nilai ${nilai}. Penguasaanmu tentang Tata Surya sangat luar biasa! Terus pertahankan semangat belajarmu dan jadilah ilmuwan masa depan!`;
+      } else if (nilai >= 70) {
+        icon = '⭐'; judul = 'Bagus Sekali!'; sub = 'Hampir sempurna!';
+        warnaKilai = '#66dd88';
+        pesan = `Hebat! Kamu mendapat nilai ${nilai}. Pemahamanmu tentang Tata Surya sudah sangat baik. Ulangi materi tentang soal yang salah untuk mendapat nilai sempurna!`;
+      } else if (nilai >= 50) {
+        icon = '👍'; judul = 'Cukup Baik!'; sub = 'Terus semangat!';
+        warnaKilai = '#4fc3f7';
+        pesan = `Kamu mendapat nilai ${nilai}. Sudah cukup baik! Pelajari kembali materi yang masih kurang dipahami, terutama tentang ciri-ciri dan posisi setiap planet.`;
+      } else {
+        icon = '📚'; judul = 'Jangan Menyerah!'; sub = 'Belajar lagi yuk!';
+        warnaKilai = '#ff7766';
+        pesan = `Kamu mendapat nilai ${nilai}. Jangan putus asa! Coba gunakan fitur Kamera AR untuk belajar lebih interaktif tentang setiap planet. Setelah itu coba kuis lagi!`;
+      }
+
+      document.getElementById('hasil-icon').textContent = icon;
+      document.getElementById('hasil-judul').textContent = judul;
+      document.getElementById('hasil-sub').textContent = sub;
+      document.getElementById('nilai-besar').style.color = warnaKilai;
+      document.getElementById('pesan-hasil').textContent = pesan;
+    }
+
+    function ulangiKuis() {
+      inisialisasi();
+    }
+
+    // =============================================
+    // BINTANG LATAR
+    // =============================================
+    const sc = document.getElementById('stars');
+    for (let i = 0; i < 80; i++) {
+      const s = document.createElement('div');
+      s.className = 'star';
+      const sz = Math.random() * 2 + 0.5;
+      s.style.cssText = `width:${sz}px;height:${sz}px;top:${Math.random()*100}%;left:${Math.random()*100}%;animation-delay:${Math.random()*3}s;animation-duration:${2+Math.random()*3}s;`;
+      sc.appendChild(s);
+    }
+
+    // Mulai kuis
+    inisialisasi();
+  </script>
+</body>
+</html>

@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Petunjuk - Tata Surya AR</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Segoe UI', Arial, sans-serif;
+      background: #050520;
+      color: white;
+      min-height: 100vh;
+    }
+
+    .stars { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 0; }
+    .star { position: absolute; background: white; border-radius: 50%; animation: twinkle 3s infinite alternate; }
+    @keyframes twinkle { 0% { opacity: 0.2; } 100% { opacity: 1; } }
+
+    .container {
+      position: relative;
+      z-index: 1;
+      max-width: 480px;
+      margin: 0 auto;
+      padding: 20px;
+      padding-bottom: 40px;
+    }
+
+    .header-back {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 24px;
+    }
+
+    .btn-back {
+      background: rgba(255,255,255,0.1);
+      border: 1px solid rgba(255,255,255,0.2);
+      color: white;
+      padding: 8px 16px;
+      border-radius: 10px;
+      cursor: pointer;
+      font-size: 14px;
+      text-decoration: none;
+      transition: background 0.2s;
+    }
+    .btn-back:hover { background: rgba(255,255,255,0.2); }
+
+    .header-back h2 {
+      font-size: 20px;
+      color: #f0c040;
+      font-weight: 700;
+    }
+
+    /* Tab navigasi */
+    .tab-bar {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 20px;
+      overflow-x: auto;
+      padding-bottom: 4px;
+    }
+
+    .tab-btn {
+      padding: 8px 16px;
+      border-radius: 20px;
+      border: 1px solid rgba(100,120,255,0.35);
+      background: rgba(20,20,80,0.6);
+      color: #aaaacc;
+      font-size: 13px;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.2s;
+    }
+
+    .tab-btn.aktif {
+      background: rgba(60,80,200,0.8);
+      border-color: rgba(150,170,255,0.6);
+      color: white;
+    }
+
+    /* Konten Tab */
+    .tab-konten { display: none; }
+    .tab-konten.aktif { display: block; }
+
+    /* Langkah-langkah */
+    .step-list {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .step-item {
+      display: flex;
+      gap: 14px;
+      align-items: flex-start;
+      background: rgba(15,15,60,0.8);
+      border: 1px solid rgba(80,100,200,0.3);
+      border-radius: 14px;
+      padding: 16px;
+    }
+
+    .step-num {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #1a3a8a, #3a5add);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 15px;
+      font-weight: 700;
+      color: white;
+      flex-shrink: 0;
+    }
+
+    .step-content h3 {
+      font-size: 15px;
+      color: #f0c040;
+      margin-bottom: 6px;
+      font-weight: 600;
+    }
+
+    .step-content p {
+      font-size: 13px;
+      color: #ccccee;
+      line-height: 1.65;
+    }
+
+    /* Info planet */
+    .planet-info-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .planet-info-row {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      background: rgba(15,15,60,0.8);
+      border: 1px solid rgba(80,100,200,0.25);
+      border-radius: 12px;
+      padding: 12px 14px;
+    }
+
+    .planet-dot {
+      width: 38px;
+      height: 38px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .planet-info-teks h4 {
+      font-size: 14px;
+      color: white;
+      margin-bottom: 3px;
+    }
+
+    .planet-info-teks p {
+      font-size: 12px;
+      color: #9999bb;
+      line-height: 1.5;
+    }
+
+    /* FAQ */
+    .faq-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .faq-item {
+      background: rgba(15,15,60,0.8);
+      border: 1px solid rgba(80,100,200,0.25);
+      border-radius: 12px;
+      overflow: hidden;
+    }
+
+    .faq-q {
+      padding: 14px 16px;
+      font-size: 14px;
+      color: #f0c040;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      user-select: none;
+    }
+
+    .faq-q .arrow {
+      font-size: 12px;
+      transition: transform 0.25s;
+      color: #8888aa;
+    }
+
+    .faq-item.terbuka .faq-q .arrow {
+      transform: rotate(180deg);
+    }
+
+    .faq-a {
+      display: none;
+      padding: 0 16px 14px;
+      font-size: 13px;
+      color: #ccccee;
+      line-height: 1.7;
+      border-top: 1px solid rgba(80,100,200,0.2);
+      padding-top: 12px;
+    }
+
+    .faq-item.terbuka .faq-a {
+      display: block;
+    }
+
+    /* Tips kotak */
+    .tips-box {
+      background: rgba(80,160,80,0.1);
+      border: 1px solid rgba(80,200,120,0.3);
+      border-radius: 12px;
+      padding: 14px 16px;
+      margin-top: 14px;
+    }
+
+    .tips-box h4 {
+      color: #66dd88;
+      font-size: 14px;
+      margin-bottom: 8px;
+    }
+
+    .tips-box ul {
+      padding-left: 16px;
+    }
+
+    .tips-box li {
+      font-size: 13px;
+      color: #aaddbb;
+      line-height: 1.8;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="stars" id="stars"></div>
+
+  <div class="container">
+    <div class="header-back">
+      <a href="index.html" class="btn-back">← Kembali</a>
+      <h2>📖 Petunjuk Penggunaan</h2>
+    </div>
+
+    <!-- Tab navigasi -->
+    <div class="tab-bar">
+      <button class="tab-btn aktif" onclick="gantiTab('cara-ar')">Cara AR</button>
+      <button class="tab-btn" onclick="gantiTab('planet')">Info Planet</button>
+      <button class="tab-btn" onclick="gantiTab('kuis-ptj')">Kuis</button>
+      <button class="tab-btn" onclick="gantiTab('faq')">FAQ</button>
+    </div>
+
+    <!-- Tab: Cara Pakai AR -->
+    <div id="tab-cara-ar" class="tab-konten aktif">
+      <div class="step-list">
+        <div class="step-item">
+          <div class="step-num">1</div>
+          <div class="step-content">
+            <h3>Buka Menu Kamera AR</h3>
+            <p>Di halaman utama, tekan tombol <strong>Kamera AR</strong> untuk membuka fitur pemindaian planet.</p>
+          </div>
+        </div>
+        <div class="step-item">
+          <div class="step-num">2</div>
+          <div class="step-content">
+            <h3>Pilih Planet</h3>
+            <p>Pilih salah satu dari 8 planet yang tersedia dengan menekan kartu planetnya. Kartu yang dipilih akan berwarna kuning.</p>
+          </div>
+        </div>
+        <div class="step-item">
+          <div class="step-num">3</div>
+          <div class="step-content">
+            <h3>Tekan "Mulai AR"</h3>
+            <p>Tekan tombol <strong>Mulai AR</strong> di bagian bawah layar. Berikan izin akses kamera jika diminta oleh browser.</p>
+          </div>
+        </div>
+        <div class="step-item">
+          <div class="step-num">4</div>
+          <div class="step-content">
+            <h3>Siapkan Marker</h3>
+            <p>Cetak atau tampilkan gambar marker planet di layar lain. Pastikan gambar marker jelas dan tidak terlipat.</p>
+          </div>
+        </div>
+        <div class="step-item">
+          <div class="step-num">5</div>
+          <div class="step-content">
+            <h3>Arahkan Kamera ke Marker</h3>
+            <p>Arahkan kamera perangkatmu ke gambar marker. Objek 3D planet akan muncul secara otomatis di atas marker. Informasi planet akan tampil di bagian bawah layar.</p>
+          </div>
+        </div>
+        <div class="step-item">
+          <div class="step-num">6</div>
+          <div class="step-content">
+            <h3>Eksplorasi Planet</h3>
+            <p>Gerakkan kamera atau marker untuk melihat objek 3D dari berbagai sudut. Planet akan berputar secara otomatis!</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="tips-box" style="margin-top:20px">
+        <h4>💡 Tips Agar AR Berjalan Optimal</h4>
+        <ul>
+          <li>Pastikan pencahayaan ruangan cukup terang</li>
+          <li>Jaga jarak kamera 20–40 cm dari marker</li>
+          <li>Hindari pantulan cahaya di atas marker</li>
+          <li>Gunakan koneksi WiFi saat pertama membuka AR</li>
+          <li>Buka aplikasi melalui browser Chrome terbaru</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Tab: Info Planet -->
+    <div id="tab-planet" class="tab-konten">
+      <div class="planet-info-grid">
+        <div class="planet-info-row">
+          <div class="planet-dot" style="background:radial-gradient(circle at 35% 35%, #bdbdbd, #9e9e9e)"></div>
+          <div class="planet-info-teks">
+            <h4>Merkurius — Planet ke-1</h4>
+            <p>Planet terkecil. Suhu siang 430°C, malam -180°C. Tidak memiliki satelit alami.</p>
+          </div>
+        </div>
+        <div class="planet-info-row">
+          <div class="planet-dot" style="background:radial-gradient(circle at 35% 35%, #f0d890, #e8c97a)"></div>
+          <div class="planet-info-teks">
+            <h4>Venus — Planet ke-2</h4>
+            <p>Planet terpanas (465°C). Berputar berlawanan arah dengan planet lain. Tanpa satelit.</p>
+          </div>
+        </div>
+        <div class="planet-info-row">
+          <div class="planet-dot" style="background:radial-gradient(circle at 35% 35%, #4488ff, #2266cc)"></div>
+          <div class="planet-info-teks">
+            <h4>Bumi — Planet ke-3</h4>
+            <p>Satu-satunya planet berpenghuni. 70% permukaannya air. Memiliki 1 satelit: Bulan.</p>
+          </div>
+        </div>
+        <div class="planet-info-row">
+          <div class="planet-dot" style="background:radial-gradient(circle at 35% 35%, #ff6644, #cc4422)"></div>
+          <div class="planet-info-teks">
+            <h4>Mars — Planet ke-4</h4>
+            <p>Planet Merah. Memiliki gunung berapi tertinggi (Olympus Mons). Punya 2 satelit kecil.</p>
+          </div>
+        </div>
+        <div class="planet-info-row">
+          <div class="planet-dot" style="background:radial-gradient(circle at 35% 35%, #ffaa66, #c88844)"></div>
+          <div class="planet-info-teks">
+            <h4>Jupiter — Planet ke-5</h4>
+            <p>Planet terbesar. Punya Bintik Merah Besar (badai raksasa). Memiliki 95 satelit.</p>
+          </div>
+        </div>
+        <div class="planet-info-row">
+          <div class="planet-dot" style="background:radial-gradient(circle at 35% 35%, #f0cc88, #d4aa70)"></div>
+          <div class="planet-info-teks">
+            <h4>Saturnus — Planet ke-6</h4>
+            <p>Terkenal dengan cincinnya dari es dan batu. Planet terbesar kedua. Punya 83 satelit.</p>
+          </div>
+        </div>
+        <div class="planet-info-row">
+          <div class="planet-dot" style="background:radial-gradient(circle at 35% 35%, #aaeeff, #88ccdd)"></div>
+          <div class="planet-info-teks">
+            <h4>Uranus — Planet ke-7</h4>
+            <p>Berwarna biru-hijau. Berputar miring 98°. Punya 27 satelit. Terdingin di tata surya.</p>
+          </div>
+        </div>
+        <div class="planet-info-row">
+          <div class="planet-dot" style="background:radial-gradient(circle at 35% 35%, #5577ff, #3355cc)"></div>
+          <div class="planet-info-teks">
+            <h4>Neptunus — Planet ke-8</h4>
+            <p>Planet terjauh. Angin tercepat (2.100 km/jam). 1 tahun = 165 tahun Bumi. Punya 16 satelit.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab: Petunjuk Kuis -->
+    <div id="tab-kuis-ptj" class="tab-konten">
+      <div class="step-list">
+        <div class="step-item">
+          <div class="step-num">1</div>
+          <div class="step-content">
+            <h3>Buka Menu Kuis</h3>
+            <p>Tekan tombol <strong>Kuis</strong> di halaman utama untuk memulai sesi kuis.</p>
+          </div>
+        </div>
+        <div class="step-item">
+          <div class="step-num">2</div>
+          <div class="step-content">
+            <h3>Baca Soal dengan Teliti</h3>
+            <p>Setiap soal berisi pertanyaan tentang tata surya. Baca soal dengan seksama sebelum memilih jawaban.</p>
+          </div>
+        </div>
+        <div class="step-item">
+          <div class="step-num">3</div>
+          <div class="step-content">
+            <h3>Perhatikan Timer</h3>
+            <p>Setiap soal memiliki batas waktu <strong>15 detik</strong>. Jawab sebelum waktu habis! Jika waktu habis, jawaban dianggap salah.</p>
+          </div>
+        </div>
+        <div class="step-item">
+          <div class="step-num">4</div>
+          <div class="step-content">
+            <h3>Pilih Jawaban</h3>
+            <p>Tekan salah satu dari 4 pilihan jawaban. Jawaban benar akan berwarna hijau, jawaban salah berwarna merah.</p>
+          </div>
+        </div>
+        <div class="step-item">
+          <div class="step-num">5</div>
+          <div class="step-content">
+            <h3>Baca Penjelasan</h3>
+            <p>Setelah menjawab, akan muncul penjelasan singkat tentang jawaban yang benar. Ini sangat berguna untuk belajar!</p>
+          </div>
+        </div>
+        <div class="step-item">
+          <div class="step-num">6</div>
+          <div class="step-content">
+            <h3>Lihat Hasil Akhir</h3>
+            <p>Setelah 10 soal selesai, nilai akhirmu akan ditampilkan beserta jumlah benar dan salah. Coba ulangi untuk mendapat nilai lebih tinggi!</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab: FAQ -->
+    <div id="tab-faq" class="tab-konten">
+      <div class="faq-list">
+        <div class="faq-item">
+          <div class="faq-q" onclick="toggleFaq(this)">
+            Mengapa kamera AR tidak muncul?
+            <span class="arrow">▼</span>
+          </div>
+          <div class="faq-a">
+            Pastikan kamu sudah memberikan izin akses kamera pada browser. Buka Pengaturan browser → Privasi → Izin Kamera, lalu aktifkan untuk situs ini. Juga pastikan aplikasi dibuka melalui HTTPS atau localhost.
+          </div>
+        </div>
+        <div class="faq-item">
+          <div class="faq-q" onclick="toggleFaq(this)">
+            Marker tidak terdeteksi, apa yang harus dilakukan?
+            <span class="arrow">▼</span>
+          </div>
+          <div class="faq-a">
+            Pastikan gambar marker yang kamu gunakan sesuai dengan planet yang dipilih. Cetak marker dengan resolusi yang jelas, tidak buram, dan tidak terlipat. Perbaiki pencahayaan ruangan dan jaga jarak kamera 20–40 cm dari marker.
+          </div>
+        </div>
+        <div class="faq-item">
+          <div class="faq-q" onclick="toggleFaq(this)">
+            Apakah perlu internet untuk menggunakan aplikasi ini?
+            <span class="arrow">▼</span>
+          </div>
+          <div class="faq-a">
+            Untuk pertama kali membuka halaman AR, browser perlu memuat library dari internet. Setelah itu, jika menggunakan localhost (XAMPP/Live Server), tidak perlu internet. Jika deploy di GitHub Pages, koneksi internet tetap diperlukan.
+          </div>
+        </div>
+        <div class="faq-item">
+          <div class="faq-q" onclick="toggleFaq(this)">
+            Di mana mendapatkan gambar marker planet?
+            <span class="arrow">▼</span>
+          </div>
+          <div class="faq-a">
+            Gambar marker dibuat oleh pengembang dan tersedia di folder <code>images/</code> dalam paket aplikasi. Cetak atau tampilkan gambar tersebut di layar lain untuk digunakan sebagai marker AR.
+          </div>
+        </div>
+        <div class="faq-item">
+          <div class="faq-q" onclick="toggleFaq(this)">
+            Browser apa yang direkomendasikan?
+            <span class="arrow">▼</span>
+          </div>
+          <div class="faq-a">
+            Google Chrome versi terbaru sangat direkomendasikan karena mendukung WebXR dan WebGL dengan baik. Mozilla Firefox juga bisa digunakan. Hindari menggunakan browser bawaan Android karena mungkin tidak mendukung semua fitur AR.
+          </div>
+        </div>
+        <div class="faq-item">
+          <div class="faq-q" onclick="toggleFaq(this)">
+            Mengapa soal kuis selalu berbeda urutannya?
+            <span class="arrow">▼</span>
+          </div>
+          <div class="faq-a">
+            Urutan soal dikacak secara otomatis setiap kali kuis dimulai atau diulang. Ini dirancang agar kamu tidak menghafal urutan jawaban, tetapi benar-benar memahami materinya.
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    function gantiTab(id) {
+      document.querySelectorAll('.tab-konten').forEach(t => t.classList.remove('aktif'));
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('aktif'));
+      document.getElementById('tab-' + id).classList.add('aktif');
+      event.target.classList.add('aktif');
+    }
+
+    function toggleFaq(el) {
+      const item = el.parentElement;
+      item.classList.toggle('terbuka');
+    }
+
+    // Bintang
+    const sc = document.getElementById('stars');
+    for (let i = 0; i < 80; i++) {
+      const s = document.createElement('div');
+      s.className = 'star';
+      const sz = Math.random() * 2 + 0.5;
+      s.style.cssText = `width:${sz}px;height:${sz}px;top:${Math.random()*100}%;left:${Math.random()*100}%;animation-delay:${Math.random()*3}s;animation-duration:${2+Math.random()*3}s;`;
+      sc.appendChild(s);
+    }
+  </script>
+</body>
+</html>
