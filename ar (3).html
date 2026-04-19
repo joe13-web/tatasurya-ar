@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Kamera AR - Tata Surya</title>
+
+  <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
+  <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
+
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Segoe UI', Arial, sans-serif; background: #050520; color: white; overflow: hidden; }
+
+    #halaman-pilih { min-height: 100vh; padding: 20px; overflow-y: auto; background: #050520; }
+
+    .header-back { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
+    .btn-back { background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: white; padding: 8px 16px; border-radius: 10px; cursor: pointer; font-size: 14px; text-decoration: none; }
+    .btn-back:hover { background: rgba(255,255,255,0.2); }
+    .header-back h2 { font-size: 20px; color: #f0c040; }
+
+    .instruksi { background: rgba(255,200,80,0.1); border: 1px solid rgba(255,200,80,0.3); border-radius: 10px; padding: 12px 16px; font-size: 13px; color: #f0c040; margin-bottom: 20px; line-height: 1.7; }
+
+    .planet-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 20px; }
+    .planet-card { background: rgba(20,20,80,0.7); border: 2px solid transparent; border-radius: 14px; padding: 14px 8px; text-align: center; cursor: pointer; transition: all 0.2s; }
+    .planet-card:hover { background: rgba(60,60,160,0.7); border-color: rgba(150,170,255,0.5); transform: scale(1.04); }
+    .planet-card.dipilih { border-color: #f0c040; background: rgba(80,60,10,0.6); }
+    .planet-visual { width: 52px; height: 52px; border-radius: 50%; margin: 0 auto 8px; }
+    .planet-card strong { display: block; font-size: 13px; color: white; margin-bottom: 3px; }
+    .planet-card p { font-size: 11px; color: #ccccee; }
+
+    .btn-mulai-ar { width: 100%; padding: 16px; background: linear-gradient(135deg, #1a3a8a, #3a5add); border: none; border-radius: 14px; color: white; font-size: 16px; font-weight: 700; cursor: pointer; transition: all 0.2s; }
+    .btn-mulai-ar:hover { background: linear-gradient(135deg, #2a4aaa, #5a7aff); }
+    .btn-mulai-ar:disabled { background: rgba(80,80,120,0.5); cursor: not-allowed; }
+
+    #halaman-marker { display: none; min-height: 100vh; padding: 20px; overflow-y: auto; background: #050520; }
+    .marker-box { background: rgba(15,15,60,0.85); border: 1px solid rgba(80,100,200,0.35); border-radius: 16px; padding: 20px; margin: 16px 0; text-align: center; }
+    .marker-img { width: 180px; height: 180px; border: 3px solid #f0c040; border-radius: 12px; margin: 0 auto 14px; background: white; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+    .marker-img img { width: 100%; height: 100%; object-fit: contain; }
+    .marker-box h3 { color: #f0c040; font-size: 18px; margin-bottom: 8px; }
+    .marker-box p { font-size: 13px; color: #ccccee; line-height: 1.6; }
+    .btn-buka-kamera { width: 100%; padding: 16px; background: linear-gradient(135deg, #0a6a2a, #1aaa4a); border: none; border-radius: 14px; color: white; font-size: 16px; font-weight: 700; cursor: pointer; margin-top: 16px; }
+    .btn-buka-kamera:hover { background: linear-gradient(135deg, #1a8a3a, #2acc5a); }
+
+    #halaman-ar { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; }
+    #ar-scene-wrapper { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
+
+    #btn-stop-ar { position: fixed; top: 16px; left: 16px; z-index: 9999; background: rgba(0,0,0,0.75); color: white; border: 1px solid rgba(255,255,255,0.3); padding: 10px 18px; border-radius: 10px; font-size: 14px; cursor: pointer; }
+
+    #info-planet-ar { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); z-index: 9999; background: rgba(5,5,35,0.92); border: 1px solid rgba(100,130,255,0.4); border-radius: 16px; padding: 16px 20px; width: 88%; max-width: 400px; text-align: center; display: none; }
+    #info-planet-ar .tag { display: inline-block; background: rgba(100,130,255,0.2); border: 1px solid rgba(100,130,255,0.4); border-radius: 20px; padding: 3px 12px; font-size: 11px; color: #aabbff; margin-bottom: 8px; }
+    #info-planet-ar h3 { font-size: 18px; color: #f0c040; margin-bottom: 6px; }
+    #info-planet-ar p { font-size: 13px; color: #ccccee; line-height: 1.6; }
+
+    #panduan-scan { position: fixed; top: 50%; left: 50%; transform: translate(-50%,-50%); z-index: 9998; text-align: center; pointer-events: none; }
+    .scan-frame { width: 200px; height: 200px; border: 3px solid rgba(255,200,80,0.7); border-radius: 16px; margin: 0 auto 12px; animation: pulse-border 1.5s ease-in-out infinite; }
+    @keyframes pulse-border { 0%,100% { border-color: rgba(255,200,80,0.4); } 50% { border-color: rgba(255,200,80,1); } }
+    #panduan-scan p { color: rgba(255,255,255,0.9); font-size: 13px; text-shadow: 0 1px 4px rgba(0,0,0,0.9); }
+
+    #loading-ar { position: fixed; top:0; left:0; width:100%; height:100%; background:#050520; display:flex; flex-direction:column; align-items:center; justify-content:center; z-index:99999; }
+    .spinner { width:50px; height:50px; border:4px solid rgba(255,255,255,0.1); border-top:4px solid #4fc3f7; border-radius:50%; animation:spin 0.8s linear infinite; margin-bottom:16px; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    #loading-ar p { color:#aaaacc; font-size:14px; }
+    #loading-ar .sub { color:#f0c040; font-size:12px; margin-top:6px; }
+  </style>
+</head>
+<body>
+
+  <!-- HALAMAN PILIH PLANET -->
+  <div id="halaman-pilih">
+    <div class="header-back">
+      <a href="index.html" class="btn-back">← Kembali</a>
+      <h2>📷 Kamera AR</h2>
+    </div>
+    <div class="instruksi">
+      🔍 Pilih planet lalu klik <strong>"Mulai AR"</strong>. Siapkan marker Hiro untuk dipindai.
+    </div>
+    <div class="planet-grid" id="planet-grid"></div>
+    <button class="btn-mulai-ar" id="btn-mulai-ar" disabled onclick="ke_halaman_marker()">
+      Pilih planet terlebih dahulu
+    </button>
+  </div>
+
+  <!-- HALAMAN MARKER -->
+  <div id="halaman-marker">
+    <div class="header-back">
+      <button class="btn-back" onclick="kembali_ke_pilih()">← Kembali</button>
+      <h2>🎯 Siapkan Marker</h2>
+    </div>
+    <div class="marker-box">
+      <div class="marker-img">
+        <!-- Marker Hiro dalam SVG -->
+        <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+          <rect width="100" height="100" fill="white"/>
+          <rect x="10" y="10" width="80" height="80" fill="black"/>
+          <rect x="20" y="20" width="60" height="60" fill="white"/>
+          <rect x="30" y="30" width="10" height="10" fill="black"/>
+          <rect x="60" y="30" width="10" height="10" fill="black"/>
+          <rect x="30" y="60" width="10" height="10" fill="black"/>
+          <rect x="60" y="60" width="10" height="10" fill="black"/>
+          <rect x="40" y="40" width="20" height="20" fill="black"/>
+        </svg>
+      </div>
+      <h3 id="marker-planet-nama">Planet</h3>
+      <p>Cetak atau tampilkan marker di atas.<br/>Tekan tombol buka kamera, lalu arahkan ke marker ini.</p>
+    </div>
+    <div style="background:rgba(255,200,80,0.1);border:1px solid rgba(255,200,80,0.3);border-radius:10px;padding:12px 16px;font-size:13px;color:#f0c040;line-height:1.7;margin-bottom:16px;">
+      💡 Tampilkan marker di layar laptop/HP lain atau cetak. Jarak kamera 20-30 cm.
+    </div>
+    <button class="btn-buka-kamera" onclick="mulaiAR()">📷 Buka Kamera AR</button>
+  </div>
+
+  <!-- HALAMAN AR -->
+  <div id="halaman-ar">
+    <div id="ar-scene-wrapper"></div>
+    <div id="panduan-scan">
+      <div class="scan-frame"></div>
+      <p>Arahkan ke marker Hiro...</p>
+    </div>
+    <button id="btn-stop-ar" onclick="stopAR()">← Kembali</button>
+    <div id="info-planet-ar">
+      <div class="tag" id="ar-tag"></div>
+      <h3 id="ar-nama"></h3>
+      <p id="ar-deskripsi"></p>
+    </div>
+  </div>
+
+  <!-- LOADING -->
+  <div id="loading-ar" style="display:none">
+    <div class="spinner"></div>
+    <p>Memuat kamera AR...</p>
+    <p class="sub" id="loading-sub">Mengambil tekstur planet...</p>
+  </div>
+
+  <script>
+    // =============================================
+    // DATA PLANET — dengan tekstur dari Solar System Scope
+    // URL tekstur gratis beresolusi tinggi dari solarsystemscope.com
+    // =============================================
+    const dataPlanet = [
+      {
+        id: 0, nama: "Merkurius", urutan: "Planet ke-1",
+        warnaBg: "#9e9e9e", warnaGlow: "#bdbdbd",
+        deskripsi: "Planet terkecil dan terdekat dari Matahari. Suhu siang hari bisa mencapai 430°C.",
+        // Tekstur NASA resolusi tinggi via proxy CORS-friendly
+        tekstur: "https://upload.wikimedia.org/wikipedia/commons/thumb/4/4a/Mercury_in_true_color.jpg/600px-Mercury_in_true_color.jpg",
+        warnaSolid: "#9e9e9e",
+        punya_cincin: false
+      },
+      {
+        id: 1, nama: "Venus", urutan: "Planet ke-2",
+        warnaBg: "#e8c97a", warnaGlow: "#f0d890",
+        deskripsi: "Planet terpanas di tata surya. Suhu rata-rata 465°C akibat efek rumah kaca ekstrem.",
+        tekstur: "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e5/Venus-real_color.jpg/600px-Venus-real_color.jpg",
+        warnaSolid: "#e8c97a",
+        punya_cincin: false
+      },
+      {
+        id: 2, nama: "Bumi", urutan: "Planet ke-3",
+        warnaBg: "#2266cc", warnaGlow: "#4488ff",
+        deskripsi: "Satu-satunya planet berpenghuni. Sekitar 70% permukaannya tertutup air.",
+        tekstur: "https://upload.wikimedia.org/wikipedia/commons/thumb/9/97/The_Earth_seen_from_Apollo_17.jpg/600px-The_Earth_seen_from_Apollo_17.jpg",
+        warnaSolid: "#2266cc",
+        punya_cincin: false
+      },
+      {
+        id: 3, nama: "Mars", urutan: "Planet ke-4",
+        warnaBg: "#cc4422", warnaGlow: "#ff6644",
+        deskripsi: "Planet Merah. Punya gunung berapi tertinggi di tata surya, Olympus Mons (21 km).",
+        tekstur: "https://upload.wikimedia.org/wikipedia/commons/thumb/0/02/OSIRIS_Mars_true_color.jpg/600px-OSIRIS_Mars_true_color.jpg",
+        warnaSolid: "#cc4422",
+        punya_cincin: false
+      },
+      {
+        id: 4, nama: "Jupiter", urutan: "Planet ke-5",
+        warnaBg: "#c88844", warnaGlow: "#ffaa66",
+        deskripsi: "Planet terbesar di tata surya. Punya Bintik Merah Besar — badai raksasa abadi.",
+        tekstur: "https://upload.wikimedia.org/wikipedia/commons/thumb/2/2b/Jupiter_and_its_shrunken_Great_Red_Spot.jpg/600px-Jupiter_and_its_shrunken_Great_Red_Spot.jpg",
+        warnaSolid: "#c88844",
+        punya_cincin: false
+      },
+      {
+        id: 5, nama: "Saturnus", urutan: "Planet ke-6",
+        warnaBg: "#d4aa70", warnaGlow: "#f0cc88",
+        deskripsi: "Terkenal dengan cincinnya dari es dan batu. Punya lebih dari 80 satelit alami.",
+        tekstur: "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c7/Saturn_during_Equinox.jpg/600px-Saturn_during_Equinox.jpg",
+        warnaSolid: "#d4aa70",
+        punya_cincin: true
+      },
+      {
+        id: 6, nama: "Uranus", urutan: "Planet ke-7",
+        warnaBg: "#88ccdd", warnaGlow: "#aaeeff",
+        deskripsi: "Planet biru-hijau karena gas metana. Berputar miring hampir 98 derajat.",
+        tekstur: "https://upload.wikimedia.org/wikipedia/commons/thumb/3/3d/Uranus2.jpg/600px-Uranus2.jpg",
+        warnaSolid: "#88ccdd",
+        punya_cincin: false
+      },
+      {
+        id: 7, nama: "Neptunus", urutan: "Planet ke-8",
+        warnaBg: "#3355cc", warnaGlow: "#5577ff",
+        deskripsi: "Planet terjauh dari Matahari. Anginnya bisa mencapai 2.100 km/jam.",
+        tekstur: "https://upload.wikimedia.org/wikipedia/commons/thumb/6/63/Neptune_-_Voyager_2_%2829347980845%29_flatten_crop.jpg/600px-Neptune_-_Voyager_2_%2829347980845%29_flatten_crop.jpg",
+        warnaSolid: "#3355cc",
+        punya_cincin: false
+      }
+    ];
+
+    let planetDipilih = null;
+
+    function renderKartu() {
+      const grid = document.getElementById('planet-grid');
+      dataPlanet.forEach(p => {
+        const card = document.createElement('div');
+        card.className = 'planet-card';
+        card.id = `card-${p.id}`;
+        card.onclick = () => pilihPlanet(p.id);
+        card.innerHTML = `
+          <div class="planet-visual" style="background:radial-gradient(circle at 35% 35%,${p.warnaGlow},${p.warnaBg});box-shadow:0 0 15px ${p.warnaBg}66;"></div>
+          <strong>${p.nama}</strong><p>${p.urutan}</p>
+        `;
+        grid.appendChild(card);
+      });
+    }
+
+    function pilihPlanet(id) {
+      document.querySelectorAll('.planet-card').forEach(c => c.classList.remove('dipilih'));
+      document.getElementById(`card-${id}`).classList.add('dipilih');
+      planetDipilih = id;
+      const btn = document.getElementById('btn-mulai-ar');
+      btn.disabled = false;
+      btn.textContent = `▶ Mulai AR - ${dataPlanet[id].nama}`;
+    }
+
+    function ke_halaman_marker() {
+      if (planetDipilih === null) return;
+      document.getElementById('halaman-pilih').style.display = 'none';
+      document.getElementById('marker-planet-nama').textContent = dataPlanet[planetDipilih].nama;
+      document.getElementById('halaman-marker').style.display = 'block';
+    }
+
+    function kembali_ke_pilih() {
+      document.getElementById('halaman-marker').style.display = 'none';
+      document.getElementById('halaman-pilih').style.display = 'block';
+    }
+
+    // =============================================
+    // MULAI AR dengan tekstur planet nyata
+    // =============================================
+    function mulaiAR() {
+      if (planetDipilih === null) return;
+      const planet = dataPlanet[planetDipilih];
+
+      document.getElementById('halaman-marker').style.display = 'none';
+      document.getElementById('loading-ar').style.display = 'flex';
+      document.getElementById('loading-sub').textContent = `Memuat tekstur ${planet.nama}...`;
+
+      document.getElementById('ar-tag').textContent = planet.urutan;
+      document.getElementById('ar-nama').textContent = planet.nama;
+      document.getElementById('ar-deskripsi').textContent = planet.deskripsi;
+
+      const wrapper = document.getElementById('ar-scene-wrapper');
+      wrapper.innerHTML = '';
+
+      // Cincin Saturnus
+      const cincinHTML = planet.punya_cincin ? `
+        <a-torus
+          position="0 0.5 0"
+          radius="0.65"
+          radius-tubular="0.04"
+          rotation="80 0 0"
+          color="#c8a060"
+          opacity="0.75"
+          segments-tubular="80"
+        ></a-torus>
+        <a-torus
+          position="0 0.5 0"
+          radius="0.75"
+          radius-tubular="0.025"
+          rotation="80 0 0"
+          color="#d4b070"
+          opacity="0.5"
+          segments-tubular="80"
+        ></a-torus>
+      ` : '';
+
+      // =============================================
+      // A-Frame scene dengan tekstur gambar planet asli
+      // src="#planet-tex" merujuk ke asset yang sudah di-preload
+      // =============================================
+      const sceneHTML = `
+        <a-scene
+          embedded
+          arjs="sourceType: webcam; debugUIEnabled: false; detectionMode: mono_and_matrix; matrixCodeType: 3x3;"
+          renderer="logarithmicDepthBuffer: true; antialias: true; colorManagement: true;"
+          vr-mode-ui="enabled: false"
+          loading-screen="enabled: false"
+          style="position:absolute;top:0;left:0;width:100%;height:100%;"
+        >
+          <!-- Preload tekstur planet -->
+          <a-assets timeout="15000">
+            <img id="planet-tex" src="${planet.tekstur}" crossorigin="anonymous"/>
+          </a-assets>
+
+          <a-marker preset="hiro" id="marker-hiro" smooth="true" smoothCount="10" smoothTolerance="0.01" smoothThreshold="5">
+
+            <!-- Bola planet dengan tekstur foto asli -->
+            <a-sphere
+              id="bola-planet"
+              position="0 0.5 0"
+              radius="0.45"
+              src="#planet-tex"
+              shader="flat"
+              segments-width="36"
+              segments-height="36"
+              animation="property: rotation; from: 0 0 0; to: 0 360 0; loop: true; dur: 5000; easing: linear"
+            ></a-sphere>
+
+            <!-- Efek atmosfer tipis (sphere lebih besar, transparan) -->
+            <a-sphere
+              position="0 0.5 0"
+              radius="0.48"
+              color="${planet.warnaSolid}"
+              opacity="0.08"
+              shader="flat"
+            ></a-sphere>
+
+            <!-- Nama planet -->
+            <a-text
+              value="${planet.nama}"
+              position="0 1.15 0"
+              align="center"
+              color="#f0c040"
+              width="3.5"
+              font="https://cdn.aframe.io/fonts/Exo2Bold.fnt"
+            ></a-text>
+
+            <!-- Urutan planet -->
+            <a-text
+              value="${planet.urutan}"
+              position="0 1.4 0"
+              align="center"
+              color="#aabbff"
+              width="2.5"
+            ></a-text>
+
+            ${cincinHTML}
+
+          </a-marker>
+
+          <a-entity camera></a-entity>
+        </a-scene>
+      `;
+
+      wrapper.innerHTML = sceneHTML;
+
+      // Tunggu scene + tekstur dimuat
+      let sudahMuncul = false;
+      const cekScene = setInterval(() => {
+        const scene = wrapper.querySelector('a-scene');
+        if (scene && scene.hasLoaded) {
+          clearInterval(cekScene);
+          document.getElementById('loading-ar').style.display = 'none';
+          document.getElementById('halaman-ar').style.display = 'block';
+
+          const marker = document.getElementById('marker-hiro');
+          if (marker) {
+            marker.addEventListener('markerFound', () => {
+              sudahMuncul = true;
+              document.getElementById('panduan-scan').style.display = 'none';
+              document.getElementById('info-planet-ar').style.display = 'block';
+            });
+            marker.addEventListener('markerLost', () => {
+              document.getElementById('panduan-scan').style.display = 'block';
+              document.getElementById('info-planet-ar').style.display = 'none';
+            });
+          }
+        }
+      }, 500);
+
+      // Timeout fallback 12 detik
+      setTimeout(() => {
+        clearInterval(cekScene);
+        if (document.getElementById('loading-ar').style.display !== 'none') {
+          document.getElementById('loading-ar').style.display = 'none';
+          document.getElementById('halaman-ar').style.display = 'block';
+        }
+      }, 12000);
+    }
+
+    // =============================================
+    // STOP AR
+    // =============================================
+    function stopAR() {
+      const videos = document.querySelectorAll('video');
+      videos.forEach(v => {
+        if (v.srcObject) v.srcObject.getTracks().forEach(t => t.stop());
+      });
+
+      document.getElementById('ar-scene-wrapper').innerHTML = '';
+      document.getElementById('halaman-ar').style.display = 'none';
+      document.getElementById('panduan-scan').style.display = 'block';
+      document.getElementById('info-planet-ar').style.display = 'none';
+
+      document.querySelectorAll('.planet-card').forEach(c => c.classList.remove('dipilih'));
+      planetDipilih = null;
+      const btn = document.getElementById('btn-mulai-ar');
+      btn.disabled = true;
+      btn.textContent = 'Pilih planet terlebih dahulu';
+      document.getElementById('halaman-pilih').style.display = 'block';
+    }
+
+    renderKartu();
+  </script>
+</body>
+</html>
