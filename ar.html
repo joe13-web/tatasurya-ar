@@ -4,13 +4,19 @@
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Kamera AR - Tata Surya</title>
-  <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
-  <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
+
+  <!-- Three.js + AR.js langsung tanpa A-Frame -->
+  <script src="https://cdn.jsdelivr.net/npm/three@0.136.0/build/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/ar.js@2.2.2/three.js/build/ar-threex-location-only.js" onerror="this.remove()"></script>
+  <!-- Fallback: jsartoolkit langsung -->
+  <script src="https://raw.githack.com/AR-js-org/AR.js/master/three.js/build/ar-threex.js"></script>
+
   <style>
     * { margin:0; padding:0; box-sizing:border-box; }
     body { font-family:'Segoe UI',Arial,sans-serif; background:#050520; color:white; overflow:hidden; }
 
-    #halaman-pilih { min-height:100vh; padding:20px; overflow-y:auto; background:#050520; }
+    /* ===== HALAMAN PILIH PLANET ===== */
+    #halaman-pilih { min-height:100vh; padding:20px; overflow-y:auto; background:#050520; position:relative; z-index:10; }
     .header-back { display:flex; align-items:center; gap:12px; margin-bottom:20px; }
     .btn-back { background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.2); color:white; padding:8px 16px; border-radius:10px; cursor:pointer; font-size:14px; text-decoration:none; }
     .btn-back:hover { background:rgba(255,255,255,0.2); }
@@ -21,7 +27,7 @@
     .planet-card { background:rgba(20,20,80,0.7); border:2px solid transparent; border-radius:14px; padding:14px 8px; text-align:center; cursor:pointer; transition:all 0.2s; }
     .planet-card:hover { background:rgba(60,60,160,0.7); border-color:rgba(150,170,255,0.5); transform:scale(1.04); }
     .planet-card.dipilih { border-color:#f0c040; background:rgba(80,60,10,0.6); }
-    .planet-card canvas { border-radius:50%; margin:0 auto 8px; display:block; border:2px solid rgba(255,255,255,0.2); }
+    .planet-card canvas { border-radius:50%; margin:0 auto 8px; display:block; }
     .planet-card strong { display:block; font-size:13px; color:white; margin-bottom:3px; }
     .planet-card p { font-size:11px; color:#ccccee; }
 
@@ -29,29 +35,37 @@
     .btn-mulai-ar:hover { background:linear-gradient(135deg,#2a4aaa,#5a7aff); }
     .btn-mulai-ar:disabled { background:rgba(80,80,120,0.5); cursor:not-allowed; }
 
-    #halaman-marker { display:none; min-height:100vh; padding:20px; overflow-y:auto; background:#050520; }
+    /* ===== HALAMAN MARKER ===== */
+    #halaman-marker { display:none; min-height:100vh; padding:20px; overflow-y:auto; background:#050520; position:relative; z-index:10; }
     .marker-box { background:rgba(15,15,60,0.85); border:1px solid rgba(80,100,200,0.35); border-radius:16px; padding:20px; margin:16px 0; text-align:center; }
-    .marker-img-wrap { width:180px; height:180px; border:3px solid #f0c040; border-radius:12px; margin:0 auto 14px; background:white; display:flex; align-items:center; justify-content:center; overflow:hidden; }
-    .marker-box h3 { color:#f0c040; font-size:18px; margin-bottom:8px; }
+    .marker-img-wrap { width:180px; height:180px; border:3px solid #f0c040; border-radius:12px; margin:10px auto; background:white; display:flex; align-items:center; justify-content:center; overflow:hidden; }
+    .marker-box h3 { color:#f0c040; font-size:18px; margin-bottom:6px; }
     .marker-box p { font-size:13px; color:#ccccee; line-height:1.6; }
-    #preview-planet { border-radius:50%; margin:10px auto; display:block; border:3px solid rgba(255,255,255,0.3); }
-    .btn-buka-kamera { width:100%; padding:16px; background:linear-gradient(135deg,#0a6a2a,#1aaa4a); border:none; border-radius:14px; color:white; font-size:16px; font-weight:700; cursor:pointer; margin-top:16px; }
-    .btn-buka-kamera:hover { background:linear-gradient(135deg,#1a8a3a,#2acc5a); }
     .tips-box { background:rgba(255,200,80,0.1); border:1px solid rgba(255,200,80,0.3); border-radius:10px; padding:12px 16px; font-size:13px; color:#f0c040; line-height:1.7; margin-bottom:16px; }
+    .btn-buka-kamera { width:100%; padding:16px; background:linear-gradient(135deg,#0a6a2a,#1aaa4a); border:none; border-radius:14px; color:white; font-size:16px; font-weight:700; cursor:pointer; }
+    .btn-buka-kamera:hover { background:linear-gradient(135deg,#1a8a3a,#2acc5a); }
 
-    #halaman-ar { display:none; position:fixed; top:0; left:0; width:100%; height:100%; }
-    #ar-scene-wrapper { position:absolute; top:0; left:0; width:100%; height:100%; }
-    #btn-stop-ar { position:fixed; top:16px; left:16px; z-index:9999; background:rgba(0,0,0,0.75); color:white; border:1px solid rgba(255,255,255,0.3); padding:10px 18px; border-radius:10px; font-size:14px; cursor:pointer; }
+    /* ===== AR CANVAS ===== */
+    #ar-canvas {
+      display:none;
+      position:fixed; top:0; left:0;
+      width:100%; height:100%;
+      z-index:1;
+    }
+
+    #btn-stop-ar { position:fixed; top:16px; left:16px; z-index:9999; background:rgba(0,0,0,0.8); color:white; border:1px solid rgba(255,255,255,0.3); padding:10px 18px; border-radius:10px; font-size:14px; cursor:pointer; display:none; }
+
     #info-planet-ar { position:fixed; bottom:24px; left:50%; transform:translateX(-50%); z-index:9999; background:rgba(5,5,35,0.92); border:1px solid rgba(100,130,255,0.4); border-radius:16px; padding:16px 20px; width:88%; max-width:400px; text-align:center; display:none; }
     #info-planet-ar .tag { display:inline-block; background:rgba(100,130,255,0.2); border:1px solid rgba(100,130,255,0.4); border-radius:20px; padding:3px 12px; font-size:11px; color:#aabbff; margin-bottom:8px; }
     #info-planet-ar h3 { font-size:18px; color:#f0c040; margin-bottom:6px; }
     #info-planet-ar p { font-size:13px; color:#ccccee; line-height:1.6; }
 
-    #panduan-scan { position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); z-index:9998; text-align:center; pointer-events:none; }
+    #panduan-scan { position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); z-index:9998; text-align:center; pointer-events:none; display:none; }
     .scan-frame { width:200px; height:200px; border:3px solid rgba(255,200,80,0.7); border-radius:16px; margin:0 auto 12px; animation:pulse-border 1.5s ease-in-out infinite; }
     @keyframes pulse-border { 0%,100%{border-color:rgba(255,200,80,0.4);}50%{border-color:rgba(255,200,80,1);} }
     #panduan-scan p { color:rgba(255,255,255,0.9); font-size:13px; text-shadow:0 1px 4px rgba(0,0,0,0.9); }
 
+    /* ===== LOADING ===== */
     #loading-ar { position:fixed; top:0; left:0; width:100%; height:100%; background:#050520; display:flex; flex-direction:column; align-items:center; justify-content:center; z-index:99999; }
     .spinner { width:50px; height:50px; border:4px solid rgba(255,255,255,0.1); border-top:4px solid #4fc3f7; border-radius:50%; animation:spin 0.8s linear infinite; margin-bottom:16px; }
     @keyframes spin { to{transform:rotate(360deg);} }
@@ -61,14 +75,14 @@
 </head>
 <body>
 
+<!-- HALAMAN PILIH PLANET -->
 <div id="halaman-pilih">
   <div class="header-back">
     <a href="index.html" class="btn-back">← Kembali</a>
     <h2>📷 Kamera AR</h2>
   </div>
   <div class="instruksi">
-    🔍 Pilih planet lalu klik <strong>"Mulai AR"</strong>.<br/>
-    Arahkan kamera ke marker Hiro untuk melihat planet 3D bertekstur.
+    🔍 Pilih planet lalu klik <strong>"Mulai AR"</strong>. Arahkan kamera ke marker Hiro.
   </div>
   <div class="planet-grid" id="planet-grid"></div>
   <button class="btn-mulai-ar" id="btn-mulai-ar" disabled onclick="ke_halaman_marker()">
@@ -76,13 +90,14 @@
   </button>
 </div>
 
+<!-- HALAMAN MARKER -->
 <div id="halaman-marker">
   <div class="header-back">
     <button class="btn-back" onclick="kembali_ke_pilih()">← Kembali</button>
     <h2>🎯 Siapkan Marker</h2>
   </div>
   <div class="marker-box">
-    <canvas id="preview-planet" width="90" height="90"></canvas>
+    <canvas id="preview-planet" width="90" height="90" style="border-radius:50%;margin:0 auto 12px;display:block;border:3px solid rgba(255,255,255,0.3);"></canvas>
     <div class="marker-img-wrap">
       <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
         <rect width="100" height="100" fill="white"/>
@@ -96,26 +111,28 @@
       </svg>
     </div>
     <h3 id="marker-nama">Planet</h3>
-    <p>Tampilkan marker di atas di layar lain atau cetak.<br/>Lalu tekan tombol buka kamera.</p>
+    <p>Tampilkan marker di layar lain atau cetak.<br/>Arahkan kamera HP ke marker ini.</p>
   </div>
-  <div class="tips-box">💡 Jarak kamera 20–30 cm dari marker. Pastikan cahaya cukup.</div>
+  <div class="tips-box">💡 Jarak kamera 20–30 cm dari marker. Pastikan cahaya cukup terang.</div>
   <button class="btn-buka-kamera" onclick="mulaiAR()">📷 Buka Kamera AR</button>
 </div>
 
-<div id="halaman-ar">
-  <div id="ar-scene-wrapper"></div>
-  <div id="panduan-scan">
-    <div class="scan-frame"></div>
-    <p>Arahkan ke marker Hiro...</p>
-  </div>
-  <button id="btn-stop-ar" onclick="stopAR()">← Kembali</button>
-  <div id="info-planet-ar">
-    <div class="tag" id="ar-tag"></div>
-    <h3 id="ar-nama"></h3>
-    <p id="ar-deskripsi"></p>
-  </div>
+<!-- Canvas AR (Three.js render langsung) -->
+<canvas id="ar-canvas"></canvas>
+
+<!-- UI overlay AR -->
+<button id="btn-stop-ar" onclick="stopAR()">← Kembali</button>
+<div id="panduan-scan">
+  <div class="scan-frame"></div>
+  <p>Arahkan ke marker Hiro...</p>
+</div>
+<div id="info-planet-ar">
+  <div class="tag" id="ar-tag"></div>
+  <h3 id="ar-nama"></h3>
+  <p id="ar-deskripsi"></p>
 </div>
 
+<!-- Loading -->
 <div id="loading-ar" style="display:none">
   <div class="spinner"></div>
   <p>Memuat kamera AR...</p>
@@ -124,240 +141,378 @@
 
 <script>
 // ================================================================
-// FUNGSI BUAT TEKSTUR PLANET PAKAI CANVAS
-// Semua tekstur dibuat secara programatik — tidak butuh file gambar
+// BUAT TEKSTUR PLANET REALISTIK DENGAN CANVAS 2D
+// Resolusi tinggi 1024x512 untuk kualitas maksimal
 // ================================================================
+function buatTekstur(namaplanet) {
+  const W = 1024, H = 512;
+  const c = document.createElement('canvas');
+  c.width = W; c.height = H;
+  const ctx = c.getContext('2d');
 
-function buatTeksturCanvas(planet, ukuran) {
-  const canvas = document.createElement('canvas');
-  canvas.width  = ukuran || 512;
-  canvas.height = ukuran || 512;
-  const ctx = canvas.getContext('2d');
-  const W = canvas.width;
-  const H = canvas.height;
+  // Helper noise sederhana
+  function noise(x, y, scale) {
+    return Math.sin(x * scale * 3.14) * Math.cos(y * scale * 2.71) * 0.5 + 0.5;
+  }
 
-  switch(planet) {
+  switch(namaplanet) {
 
     case 'merkurius': {
-      // Abu-abu berbintik seperti permukaan kawah
-      const g = ctx.createRadialGradient(W*0.4,H*0.35,W*0.05, W*0.5,H*0.5,W*0.5);
-      g.addColorStop(0,'#d4d4d4'); g.addColorStop(0.5,'#a0a0a0'); g.addColorStop(1,'#5a5a5a');
-      ctx.fillStyle = g; ctx.fillRect(0,0,W,H);
-      // Kawah
-      for(let i=0;i<80;i++){
-        const x=Math.random()*W, y=Math.random()*H, r=Math.random()*18+3;
+      // Base abu gelap
+      ctx.fillStyle = '#8a8a8a'; ctx.fillRect(0,0,W,H);
+      // Variasi permukaan
+      for(let i=0;i<6000;i++){
+        const x=Math.random()*W, y=Math.random()*H;
+        const v = noise(x/W, y/H, 8)*60 - 30;
+        const b = 120 + v;
+        ctx.fillStyle=`rgb(${b},${b},${b})`;
+        ctx.fillRect(x,y,2,2);
+      }
+      // Kawah realistik banyak
+      for(let i=0;i<120;i++){
+        const x=Math.random()*W, y=Math.random()*H, r=Math.random()*22+2;
+        // Bayangan kawah
+        const grd=ctx.createRadialGradient(x,y,0,x,y,r);
+        grd.addColorStop(0,'rgba(50,50,50,0.8)');
+        grd.addColorStop(0.6,'rgba(80,80,80,0.4)');
+        grd.addColorStop(0.85,'rgba(160,160,160,0.2)');
+        grd.addColorStop(1,'rgba(180,180,180,0)');
+        ctx.fillStyle=grd; ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2); ctx.fill();
+        // Rim terang
         ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2);
-        ctx.fillStyle=`rgba(60,60,60,${Math.random()*0.5+0.2})`; ctx.fill();
-        ctx.beginPath(); ctx.arc(x-r*0.2,y-r*0.2,r*0.6,0,Math.PI*2);
-        ctx.fillStyle=`rgba(180,180,180,0.3)`; ctx.fill();
+        ctx.strokeStyle=`rgba(200,200,200,0.3)`; ctx.lineWidth=1; ctx.stroke();
       }
-      // Bintik terang
-      for(let i=0;i<40;i++){
-        ctx.beginPath(); ctx.arc(Math.random()*W,Math.random()*H,Math.random()*3+1,0,Math.PI*2);
-        ctx.fillStyle=`rgba(220,220,220,0.4)`; ctx.fill();
-      }
+      // Highlight matahari (gradasi terang di satu sisi)
+      const hl=ctx.createRadialGradient(W*0.3,H*0.35,0,W*0.5,H*0.5,W*0.6);
+      hl.addColorStop(0,'rgba(220,220,220,0.3)'); hl.addColorStop(1,'rgba(0,0,0,0.5)');
+      ctx.fillStyle=hl; ctx.fillRect(0,0,W,H);
       break;
     }
 
     case 'venus': {
-      // Kuning oranye berputar seperti awan tebal
-      const g = ctx.createRadialGradient(W*0.4,H*0.3,W*0.1, W*0.5,H*0.5,W*0.55);
-      g.addColorStop(0,'#ffe08a'); g.addColorStop(0.4,'#e8c060'); g.addColorStop(0.8,'#c8902a'); g.addColorStop(1,'#a06010');
-      ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
-      // Pita awan horizontal
-      for(let i=0;i<20;i++){
+      ctx.fillStyle='#c8962a'; ctx.fillRect(0,0,W,H);
+      // Lapisan awan tebal berlapis
+      const lapisanWarna = ['#f0e080','#e8c860','#d4a840','#c08820','#b07010'];
+      for(let band=0;band<H;band++){
+        const t=band/H;
+        const idx=Math.floor(t*lapisanWarna.length);
+        ctx.fillStyle=lapisanWarna[Math.min(idx,lapisanWarna.length-1)];
+        ctx.fillRect(0,band,W,1);
+      }
+      // Awan berputar realistik
+      for(let i=0;i<200;i++){
+        const x=Math.random()*W*1.2-W*0.1, y=Math.random()*H;
+        const rx=Math.random()*120+30, ry=Math.random()*18+4;
+        const alpha=Math.random()*0.3+0.05;
+        ctx.save(); ctx.translate(x,y); ctx.rotate(Math.random()*0.3-0.15);
+        ctx.beginPath(); ctx.ellipse(0,0,rx,ry,0,0,Math.PI*2);
+        ctx.fillStyle=`rgba(255,240,160,${alpha})`; ctx.fill();
+        ctx.restore();
+      }
+      // Garis awan horizontal
+      for(let i=0;i<40;i++){
         const y=Math.random()*H;
-        ctx.beginPath(); ctx.ellipse(W/2,y,W*0.6,Math.random()*15+5,0,0,Math.PI*2);
-        ctx.fillStyle=`rgba(255,220,100,${Math.random()*0.25+0.05})`; ctx.fill();
+        ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(W,y+Math.random()*20-10);
+        ctx.strokeStyle=`rgba(255,220,100,${Math.random()*0.2+0.05})`;
+        ctx.lineWidth=Math.random()*6+1; ctx.stroke();
       }
-      // Pusaran awan
-      for(let i=0;i<12;i++){
-        const x=Math.random()*W, y=Math.random()*H;
-        ctx.beginPath(); ctx.arc(x,y,Math.random()*30+10,0,Math.PI*2);
-        ctx.fillStyle=`rgba(200,150,50,${Math.random()*0.2+0.05})`; ctx.fill();
-      }
+      // Cahaya matahari
+      const hl=ctx.createRadialGradient(W*0.35,H*0.3,0,W*0.5,H*0.5,W*0.55);
+      hl.addColorStop(0,'rgba(255,255,200,0.25)'); hl.addColorStop(1,'rgba(80,40,0,0.4)');
+      ctx.fillStyle=hl; ctx.fillRect(0,0,W,H);
       break;
     }
 
     case 'bumi': {
-      // Biru laut + daratan hijau-coklat + awan putih
-      ctx.fillStyle='#1a5fa8'; ctx.fillRect(0,0,W,H);
-      // Laut gradasi
-      const gLaut = ctx.createLinearGradient(0,0,W,H);
-      gLaut.addColorStop(0,'#1a6ab8'); gLaut.addColorStop(0.5,'#1a5fa8'); gLaut.addColorStop(1,'#0d3d7a');
-      ctx.fillStyle=gLaut; ctx.fillRect(0,0,W,H);
-      // Daratan (bentuk acak mirip benua)
-      const daratan = [
-        {x:0.15,y:0.1,w:0.35,h:0.55,r:0.12},  // Amerika
-        {x:0.5,y:0.08,w:0.28,h:0.45,r:0.1},   // Eropa-Afrika
-        {x:0.62,y:0.1,w:0.32,h:0.4,r:0.1},    // Asia
-        {x:0.65,y:0.55,w:0.18,h:0.25,r:0.08}, // Australia
-        {x:0.08,y:0.65,w:0.22,h:0.22,r:0.08}, // Amerika Selatan
-      ];
-      daratan.forEach(d=>{
-        const gd = ctx.createRadialGradient(d.x*W,d.y*H,0,(d.x+d.w/2)*W,(d.y+d.h/2)*H,d.r*W);
-        gd.addColorStop(0,'#4a8c3a'); gd.addColorStop(0.5,'#5a7a30'); gd.addColorStop(1,'#8a6020');
-        ctx.fillStyle=gd;
-        ctx.beginPath();
-        ctx.ellipse((d.x+d.w/2)*W,(d.y+d.h/2)*H,d.w/2*W,d.h/2*H,Math.random()*0.5,0,Math.PI*2);
-        ctx.fill();
-        // Warna variasi daratan
-        for(let i=0;i<8;i++){
-          ctx.beginPath();
-          ctx.ellipse(
-            (d.x+Math.random()*d.w)*W,(d.y+Math.random()*d.h)*H,
-            Math.random()*d.w*0.3*W,Math.random()*d.h*0.3*H,
-            Math.random()*Math.PI,0,Math.PI*2
-          );
-          ctx.fillStyle=`rgba(${60+Math.random()*40},${100+Math.random()*40},${20+Math.random()*30},0.5)`;
-          ctx.fill();
-        }
-      });
-      // Kutub putih
-      ctx.fillStyle='rgba(255,255,255,0.7)';
-      ctx.beginPath(); ctx.ellipse(W/2,0,W*0.25,H*0.08,0,0,Math.PI*2); ctx.fill();
-      ctx.beginPath(); ctx.ellipse(W/2,H,W*0.2,H*0.06,0,0,Math.PI*2); ctx.fill();
-      // Awan
-      for(let i=0;i<18;i++){
-        ctx.beginPath();
-        ctx.ellipse(Math.random()*W,Math.random()*H,Math.random()*60+20,Math.random()*20+8,Math.random()*Math.PI,0,Math.PI*2);
-        ctx.fillStyle=`rgba(255,255,255,${Math.random()*0.35+0.1})`; ctx.fill();
+      // Laut biru dalam
+      for(let y=0;y<H;y++){
+        const t=y/H;
+        const r=Math.round(10+t*20), g=Math.round(60+t*30), b=Math.round(120+t*40);
+        ctx.fillStyle=`rgb(${r},${g},${b})`; ctx.fillRect(0,y,W,1);
       }
+
+      // Fungsi gambar benua realistik
+      function gambarDaratan(px,py,skalaX,skalaY,warna1,warna2,rot){
+        ctx.save(); ctx.translate(px,py); ctx.rotate(rot||0);
+        ctx.scale(skalaX,skalaY);
+        // Outline benua dengan noise
+        ctx.beginPath();
+        const pts=20;
+        for(let i=0;i<=pts;i++){
+          const angle=(i/pts)*Math.PI*2;
+          const r2=60+Math.sin(angle*3)*15+Math.cos(angle*5)*10+Math.random()*8;
+          const x=Math.cos(angle)*r2, y2=Math.sin(angle)*r2*0.6;
+          i===0?ctx.moveTo(x,y2):ctx.lineTo(x,y2);
+        }
+        ctx.closePath();
+        const gd=ctx.createRadialGradient(0,0,0,0,0,60);
+        gd.addColorStop(0,warna1); gd.addColorStop(0.5,warna2); gd.addColorStop(1,'#5a6a20');
+        ctx.fillStyle=gd; ctx.fill();
+        // Detail pegunungan
+        for(let i=0;i<8;i++){
+          ctx.beginPath(); ctx.arc(Math.random()*80-40,Math.random()*40-20,Math.random()*15+5,0,Math.PI*2);
+          ctx.fillStyle='rgba(100,80,40,0.35)'; ctx.fill();
+        }
+        ctx.restore();
+      }
+
+      // Amerika Utara
+      gambarDaratan(W*0.18,H*0.28, 1.2,1.0, '#3a7a28','#5a9a38', -0.1);
+      // Amerika Selatan
+      gambarDaratan(W*0.24,H*0.62, 0.85,1.3, '#2a8030','#4a9a40', 0.05);
+      // Eropa
+      gambarDaratan(W*0.51,H*0.25, 0.75,0.7, '#6a8a30','#7a9a38', 0.0);
+      // Afrika
+      gambarDaratan(W*0.53,H*0.55, 0.95,1.4, '#8a7a28','#a08838', 0.0);
+      // Asia besar
+      gambarDaratan(W*0.68,H*0.25, 2.0,1.1, '#6a8230','#7a9238', 0.05);
+      // Australia
+      gambarDaratan(W*0.78,H*0.68, 0.85,0.75, '#9a8040','#b09050', 0.1);
+      // Greenland
+      gambarDaratan(W*0.32,H*0.12, 0.5,0.4, '#d0e0f0','#e0f0ff', 0.0);
+
+      // Lautan lebih dalam di beberapa area
+      for(let i=0;i<15;i++){
+        const gd=ctx.createRadialGradient(Math.random()*W,Math.random()*H,0,Math.random()*W,Math.random()*H,Math.random()*100+50);
+        gd.addColorStop(0,'rgba(5,30,80,0.3)'); gd.addColorStop(1,'rgba(5,30,80,0)');
+        ctx.fillStyle=gd; ctx.fillRect(0,0,W,H);
+      }
+
+      // Kutub es Arktik
+      const kutubU=ctx.createRadialGradient(W/2,0,0,W/2,0,H*0.22);
+      kutubU.addColorStop(0,'rgba(240,248,255,0.95)'); kutubU.addColorStop(0.7,'rgba(200,230,255,0.6)'); kutubU.addColorStop(1,'rgba(200,230,255,0)');
+      ctx.fillStyle=kutubU; ctx.fillRect(0,0,W,H);
+      // Kutub es Antartika
+      const kutubS=ctx.createRadialGradient(W/2,H,0,W/2,H,H*0.18);
+      kutubS.addColorStop(0,'rgba(240,248,255,0.9)'); kutubS.addColorStop(0.7,'rgba(210,235,255,0.5)'); kutubS.addColorStop(1,'rgba(210,235,255,0)');
+      ctx.fillStyle=kutubS; ctx.fillRect(0,0,W,H);
+
+      // Awan realistik
+      for(let i=0;i<80;i++){
+        const x=Math.random()*W, y=Math.random()*H;
+        const rx=Math.random()*90+20, ry=Math.random()*22+6;
+        ctx.save(); ctx.translate(x,y); ctx.rotate(Math.random()*0.4-0.2);
+        // Awan berlapis untuk efek volume
+        for(let j=3;j>0;j--){
+          ctx.beginPath(); ctx.ellipse(0,0,rx*(j/3),ry*(j/3),0,0,Math.PI*2);
+          ctx.fillStyle=`rgba(255,255,255,${0.08+j*0.06})`; ctx.fill();
+        }
+        ctx.restore();
+      }
+
+      // Pencahayaan realistik dari matahari
+      const cahaya=ctx.createRadialGradient(W*0.35,H*0.3,0,W*0.5,H*0.5,W*0.55);
+      cahaya.addColorStop(0,'rgba(255,255,240,0.18)');
+      cahaya.addColorStop(0.5,'rgba(0,0,0,0)');
+      cahaya.addColorStop(1,'rgba(0,0,30,0.55)');
+      ctx.fillStyle=cahaya; ctx.fillRect(0,0,W,H);
+
+      // Efek atmosfer biru di tepi
+      const atm=ctx.createLinearGradient(0,0,W,0);
+      atm.addColorStop(0,'rgba(60,120,220,0.25)');
+      atm.addColorStop(0.1,'rgba(0,0,0,0)');
+      atm.addColorStop(0.9,'rgba(0,0,0,0)');
+      atm.addColorStop(1,'rgba(60,120,220,0.25)');
+      ctx.fillStyle=atm; ctx.fillRect(0,0,W,H);
       break;
     }
 
     case 'mars': {
-      // Merah kecoklatan dengan kawah dan kutub
-      const g=ctx.createRadialGradient(W*0.35,H*0.3,W*0.05,W*0.5,H*0.5,W*0.55);
-      g.addColorStop(0,'#e8703a'); g.addColorStop(0.4,'#cc4422'); g.addColorStop(0.8,'#8a2a10'); g.addColorStop(1,'#5a1a08');
-      ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
+      // Base merah Mars
+      for(let y=0;y<H;y++){
+        const t=y/H;
+        const r=Math.round(160+t*20), g=Math.round(50+t*20), b=Math.round(20+t*10);
+        ctx.fillStyle=`rgb(${r},${g},${b})`; ctx.fillRect(0,y,W,1);
+      }
       // Variasi permukaan
-      for(let i=0;i<30;i++){
-        ctx.beginPath(); ctx.ellipse(Math.random()*W,Math.random()*H,Math.random()*60+20,Math.random()*30+10,Math.random()*Math.PI,0,Math.PI*2);
-        ctx.fillStyle=`rgba(${100+Math.random()*60},${20+Math.random()*20},${5+Math.random()*10},${Math.random()*0.4+0.1})`; ctx.fill();
+      for(let i=0;i<4000;i++){
+        const x=Math.random()*W, y=Math.random()*H;
+        const v=Math.random()*40-20;
+        ctx.fillStyle=`rgba(${100+v},${20+v/3},${5+v/5},0.3)`;
+        ctx.fillRect(x,y,3,3);
       }
-      // Kawah
-      for(let i=0;i<50;i++){
-        const x=Math.random()*W,y=Math.random()*H,r=Math.random()*20+3;
+      // Kawah realistik
+      for(let i=0;i<100;i++){
+        const x=Math.random()*W, y=Math.random()*H, r=Math.random()*25+3;
+        const grd=ctx.createRadialGradient(x-r*0.2,y-r*0.2,0,x,y,r);
+        grd.addColorStop(0,'rgba(60,15,5,0.85)');
+        grd.addColorStop(0.5,'rgba(100,25,8,0.5)');
+        grd.addColorStop(0.8,'rgba(180,60,20,0.2)');
+        grd.addColorStop(1,'rgba(180,60,20,0)');
+        ctx.fillStyle=grd; ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2); ctx.fill();
+        // Rim kawah
         ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2);
-        ctx.fillStyle=`rgba(80,20,5,${Math.random()*0.5+0.2})`; ctx.fill();
-        ctx.beginPath(); ctx.arc(x-r*0.25,y-r*0.25,r*0.5,0,Math.PI*2);
-        ctx.fillStyle=`rgba(220,100,60,0.3)`; ctx.fill();
+        ctx.strokeStyle='rgba(220,100,50,0.25)'; ctx.lineWidth=1.5; ctx.stroke();
       }
-      // Lembah Marineris (garis panjang)
-      ctx.beginPath(); ctx.moveTo(W*0.2,H*0.5); ctx.lineTo(W*0.75,H*0.52);
-      ctx.strokeStyle='rgba(60,15,5,0.6)'; ctx.lineWidth=12; ctx.stroke();
-      // Kutub putih
-      ctx.fillStyle='rgba(240,240,255,0.75)';
-      ctx.beginPath(); ctx.ellipse(W/2,H*0.04,W*0.18,H*0.06,0,0,Math.PI*2); ctx.fill();
+      // Lembah Marineris
+      for(let i=0;i<5;i++){
+        ctx.beginPath();
+        ctx.moveTo(W*0.15, H*(0.45+i*0.015));
+        ctx.bezierCurveTo(W*0.3,H*(0.48+i*0.01), W*0.6,H*(0.44+i*0.01), W*0.82,H*(0.46+i*0.015));
+        ctx.strokeStyle=`rgba(80,20,5,${0.5-i*0.05})`; ctx.lineWidth=6-i; ctx.stroke();
+      }
+      // Olympus Mons (gunung berapi raksasa)
+      const om=ctx.createRadialGradient(W*0.25,H*0.35,0,W*0.25,H*0.35,W*0.08);
+      om.addColorStop(0,'rgba(200,80,30,0.6)'); om.addColorStop(0.5,'rgba(160,50,15,0.3)'); om.addColorStop(1,'rgba(160,50,15,0)');
+      ctx.fillStyle=om; ctx.beginPath(); ctx.ellipse(W*0.25,H*0.35,W*0.08,H*0.06,0,0,Math.PI*2); ctx.fill();
+      // Kutub es
+      const kutubU=ctx.createRadialGradient(W/2,0,0,W/2,0,H*0.15);
+      kutubU.addColorStop(0,'rgba(240,240,255,0.9)'); kutubU.addColorStop(0.6,'rgba(220,180,160,0.4)'); kutubU.addColorStop(1,'rgba(220,180,160,0)');
+      ctx.fillStyle=kutubU; ctx.fillRect(0,0,W,H);
+      // Pencahayaan
+      const hl=ctx.createRadialGradient(W*0.35,H*0.3,0,W*0.5,H*0.5,W*0.55);
+      hl.addColorStop(0,'rgba(255,200,150,0.2)'); hl.addColorStop(1,'rgba(30,5,0,0.5)');
+      ctx.fillStyle=hl; ctx.fillRect(0,0,W,H);
       break;
     }
 
     case 'jupiter': {
-      // Pita-pita awan oranye-coklat + Bintik Merah Besar
-      const pita = [
-        '#f0d090','#c88840','#e8b060','#a06020','#d8a050',
-        '#b07030','#e0c080','#c09040','#d0a060','#b08040'
+      // Pita warna Jupiter yang ikonik
+      const pitaJ = [
+        {y:0,   h:0.06, c1:'#f0d890', c2:'#e8cc70'},
+        {y:0.06,h:0.08, c1:'#c07828', c2:'#a05818'},
+        {y:0.14,h:0.07, c1:'#e8c060', c2:'#d0a040'},
+        {y:0.21,h:0.09, c1:'#b06820', c2:'#904810'},
+        {y:0.30,h:0.06, c1:'#e0b850', c2:'#c89830'},
+        {y:0.36,h:0.10, c1:'#c07030', c2:'#a05010'},
+        {y:0.46,h:0.08, c1:'#d8a848', c2:'#b88828'},
+        {y:0.54,h:0.09, c1:'#b86820', c2:'#985010'},
+        {y:0.63,h:0.07, c1:'#deb050', c2:'#be9030'},
+        {y:0.70,h:0.08, c1:'#c07830', c2:'#a05820'},
+        {y:0.78,h:0.06, c1:'#e0c060', c2:'#c0a040'},
+        {y:0.84,h:0.08, c1:'#b87030', c2:'#985020'},
+        {y:0.92,h:0.08, c1:'#f0d890', c2:'#d8b860'},
       ];
-      const tinggiPita = H / pita.length;
-      pita.forEach((warna,i)=>{
-        const gy = ctx.createLinearGradient(0,i*tinggiPita,0,(i+1)*tinggiPita);
-        gy.addColorStop(0,warna); gy.addColorStop(1,pita[(i+1)%pita.length]);
-        ctx.fillStyle=gy; ctx.fillRect(0,i*tinggiPita,W,tinggiPita+1);
+      pitaJ.forEach(p=>{
+        const gy=ctx.createLinearGradient(0,p.y*H,0,(p.y+p.h)*H);
+        gy.addColorStop(0,p.c1); gy.addColorStop(1,p.c2);
+        ctx.fillStyle=gy; ctx.fillRect(0,p.y*H,W,p.h*H+1);
       });
-      // Gelombang di setiap pita
-      for(let band=0;band<pita.length;band++){
-        for(let i=0;i<8;i++){
-          ctx.beginPath();
-          ctx.ellipse(Math.random()*W,(band+0.5)*tinggiPita,Math.random()*50+20,tinggiPita*0.2,0,0,Math.PI*2);
-          ctx.fillStyle=`rgba(255,200,100,0.15)`; ctx.fill();
+      // Turbulensi di tepi pita
+      for(let i=0;i<pitaJ.length-1;i++){
+        const y=(pitaJ[i].y+pitaJ[i].h)*H;
+        for(let x=0;x<W;x+=30){
+          const wave=Math.sin(x/W*Math.PI*8+i)*8;
+          ctx.beginPath(); ctx.ellipse(x,y+wave,15,4,0,0,Math.PI*2);
+          ctx.fillStyle='rgba(0,0,0,0.15)'; ctx.fill();
         }
       }
-      // Bintik Merah Besar
-      const bx=W*0.6, by=H*0.6, brx=W*0.12, bry=H*0.07;
-      const gbr=ctx.createRadialGradient(bx,by,0,bx,by,brx);
-      gbr.addColorStop(0,'#cc3010'); gbr.addColorStop(0.6,'#aa2808'); gbr.addColorStop(1,'rgba(150,40,20,0)');
-      ctx.fillStyle=gbr;
-      ctx.beginPath(); ctx.ellipse(bx,by,brx,bry,0,0,Math.PI*2); ctx.fill();
-      // Pusaran di dalam bintik merah
-      for(let i=3;i>0;i--){
-        ctx.beginPath(); ctx.ellipse(bx,by,brx*(i/3.5),bry*(i/3.5),0,0,Math.PI*2);
-        ctx.strokeStyle=`rgba(200,60,20,${0.2/i})`; ctx.lineWidth=2; ctx.stroke();
+      // Arus dan pusaran di setiap pita
+      for(let i=0;i<60;i++){
+        const x=Math.random()*W, y=Math.random()*H;
+        ctx.beginPath(); ctx.ellipse(x,y,Math.random()*40+10,Math.random()*12+4,0,0,Math.PI*2);
+        ctx.fillStyle=`rgba(255,200,100,${Math.random()*0.12})`; ctx.fill();
       }
+      // Bintik Merah Besar — IKONIK
+      const bx=W*0.62, by=H*0.58;
+      // Pusaran luar
+      for(let r=0;r<5;r++){
+        ctx.beginPath(); ctx.ellipse(bx,by,W*0.075-r*5,H*0.055-r*3,0,0,Math.PI*2);
+        ctx.strokeStyle=`rgba(${150-r*10},${30-r*3},${10},${0.5-r*0.08})`; ctx.lineWidth=3; ctx.stroke();
+      }
+      const gbr=ctx.createRadialGradient(bx-10,by-8,0,bx,by,W*0.075);
+      gbr.addColorStop(0,'#e04020'); gbr.addColorStop(0.3,'#c02010'); gbr.addColorStop(0.7,'#a01808'); gbr.addColorStop(1,'rgba(140,30,10,0)');
+      ctx.fillStyle=gbr; ctx.beginPath(); ctx.ellipse(bx,by,W*0.075,H*0.055,0,0,Math.PI*2); ctx.fill();
+      // Inti bintik merah
+      const ginti=ctx.createRadialGradient(bx-8,by-6,0,bx,by,W*0.03);
+      ginti.addColorStop(0,'rgba(255,120,60,0.8)'); ginti.addColorStop(1,'rgba(200,40,10,0)');
+      ctx.fillStyle=ginti; ctx.beginPath(); ctx.ellipse(bx,by,W*0.03,H*0.02,0,0,Math.PI*2); ctx.fill();
+      // Pencahayaan
+      const hlJ=ctx.createRadialGradient(W*0.35,H*0.3,0,W*0.5,H*0.5,W*0.55);
+      hlJ.addColorStop(0,'rgba(255,220,150,0.15)'); hlJ.addColorStop(1,'rgba(20,8,0,0.45)');
+      ctx.fillStyle=hlJ; ctx.fillRect(0,0,W,H);
       break;
     }
 
     case 'saturnus': {
-      // Kuning pucat dengan pita halus
-      const g=ctx.createRadialGradient(W*0.4,H*0.35,W*0.05,W*0.5,H*0.5,W*0.55);
-      g.addColorStop(0,'#f5e0a0'); g.addColorStop(0.5,'#d4aa70'); g.addColorStop(0.85,'#b08040'); g.addColorStop(1,'#806020');
-      ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
-      // Pita horizontal tipis
-      for(let i=0;i<25;i++){
-        const y=(i/25)*H;
-        ctx.beginPath(); ctx.rect(0,y,W,H/25*0.6);
-        ctx.fillStyle=`rgba(${160+Math.random()*60},${120+Math.random()*40},${40+Math.random()*20},${Math.random()*0.2+0.05})`; ctx.fill();
+      // Saturnus — pita lebih halus dari Jupiter
+      for(let y=0;y<H;y++){
+        const t=y/H;
+        const r=Math.round(200+Math.sin(t*Math.PI*12)*25);
+        const g=Math.round(160+Math.sin(t*Math.PI*12+1)*20);
+        const b=Math.round(80+Math.sin(t*Math.PI*12+2)*15);
+        ctx.fillStyle=`rgb(${r},${g},${b})`; ctx.fillRect(0,y,W,1);
       }
-      // Pusaran halus
-      for(let i=0;i<10;i++){
-        ctx.beginPath(); ctx.ellipse(Math.random()*W,Math.random()*H,Math.random()*40+15,Math.random()*15+5,0,0,Math.PI*2);
-        ctx.fillStyle=`rgba(240,200,120,0.12)`; ctx.fill();
+      for(let i=0;i<100;i++){
+        const x=Math.random()*W, y=Math.random()*H;
+        ctx.beginPath(); ctx.ellipse(x,y,Math.random()*60+15,Math.random()*12+3,0,0,Math.PI*2);
+        ctx.fillStyle=`rgba(255,220,140,${Math.random()*0.1+0.02})`; ctx.fill();
       }
+      const hlS=ctx.createRadialGradient(W*0.35,H*0.3,0,W*0.5,H*0.5,W*0.55);
+      hlS.addColorStop(0,'rgba(255,240,180,0.2)'); hlS.addColorStop(1,'rgba(40,20,0,0.45)');
+      ctx.fillStyle=hlS; ctx.fillRect(0,0,W,H);
       break;
     }
 
     case 'uranus': {
-      // Biru-hijau pucat rata dengan sedikit garis
-      const g=ctx.createRadialGradient(W*0.4,H*0.35,W*0.05,W*0.5,H*0.5,W*0.55);
-      g.addColorStop(0,'#c0f0f8'); g.addColorStop(0.4,'#80d0e8'); g.addColorStop(0.75,'#40a0c0'); g.addColorStop(1,'#206080');
-      ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
-      // Pita sangat tipis
-      for(let i=0;i<12;i++){
+      // Biru-hijau pucat rata
+      for(let y=0;y<H;y++){
+        const t=y/H;
+        const r=Math.round(100+Math.sin(t*Math.PI*4)*8);
+        const g=Math.round(190+Math.sin(t*Math.PI*4+0.5)*10);
+        const b=Math.round(210+Math.sin(t*Math.PI*4+1)*8);
+        ctx.fillStyle=`rgb(${r},${g},${b})`; ctx.fillRect(0,y,W,1);
+      }
+      // Pita sangat halus
+      for(let i=0;i<20;i++){
         const y=Math.random()*H;
-        ctx.beginPath(); ctx.rect(0,y,W,Math.random()*8+2);
-        ctx.fillStyle=`rgba(180,240,255,${Math.random()*0.15+0.03})`; ctx.fill();
+        ctx.beginPath(); ctx.rect(0,y,W,Math.random()*6+1);
+        ctx.fillStyle=`rgba(160,240,255,${Math.random()*0.08+0.02})`; ctx.fill();
       }
-      // Gradasi halus
-      for(let i=0;i<6;i++){
-        ctx.beginPath(); ctx.ellipse(Math.random()*W,Math.random()*H,Math.random()*80+30,Math.random()*30+10,0,0,Math.PI*2);
-        ctx.fillStyle=`rgba(100,200,220,0.08)`; ctx.fill();
-      }
+      // Garis kutub karena miringnya rotasi
+      ctx.beginPath(); ctx.arc(W/2,H/2,H*0.45,0,Math.PI*2);
+      ctx.strokeStyle='rgba(120,210,230,0.15)'; ctx.lineWidth=3; ctx.stroke();
+      const hlU=ctx.createRadialGradient(W*0.35,H*0.35,0,W*0.5,H*0.5,W*0.5);
+      hlU.addColorStop(0,'rgba(200,240,255,0.2)'); hlU.addColorStop(1,'rgba(0,20,40,0.5)');
+      ctx.fillStyle=hlU; ctx.fillRect(0,0,W,H);
       break;
     }
 
     case 'neptunus': {
-      // Biru tua gelap dengan pusaran besar
-      const g=ctx.createRadialGradient(W*0.4,H*0.35,W*0.05,W*0.5,H*0.5,W*0.55);
-      g.addColorStop(0,'#5090e0'); g.addColorStop(0.4,'#2060c0'); g.addColorStop(0.8,'#0030a0'); g.addColorStop(1,'#001060');
-      ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
-      // Pita awan
-      for(let i=0;i<15;i++){
-        ctx.beginPath(); ctx.ellipse(Math.random()*W,Math.random()*H,Math.random()*70+25,Math.random()*20+5,Math.random()*0.3,0,Math.PI*2);
-        ctx.fillStyle=`rgba(100,160,255,${Math.random()*0.25+0.05})`; ctx.fill();
+      // Biru tua dramatis
+      for(let y=0;y<H;y++){
+        const t=y/H;
+        const r=Math.round(20+Math.sin(t*Math.PI*6)*10);
+        const g=Math.round(40+Math.sin(t*Math.PI*6+0.5)*15);
+        const b=Math.round(160+Math.sin(t*Math.PI*6+1)*30);
+        ctx.fillStyle=`rgb(${r},${g},${b})`; ctx.fillRect(0,y,W,1);
+      }
+      // Awan putih bergerak cepat
+      for(let i=0;i<50;i++){
+        ctx.save(); ctx.translate(Math.random()*W,Math.random()*H);
+        ctx.rotate(Math.random()*0.5-0.25);
+        ctx.beginPath(); ctx.ellipse(0,0,Math.random()*80+20,Math.random()*15+4,0,0,Math.PI*2);
+        ctx.fillStyle=`rgba(180,210,255,${Math.random()*0.3+0.05})`; ctx.fill();
+        ctx.restore();
       }
       // Great Dark Spot
-      const nx=W*0.4, ny=H*0.45;
-      const gds=ctx.createRadialGradient(nx,ny,0,nx,ny,W*0.1);
-      gds.addColorStop(0,'rgba(0,20,80,0.8)'); gds.addColorStop(1,'rgba(0,20,80,0)');
-      ctx.fillStyle=gds;
-      ctx.beginPath(); ctx.ellipse(nx,ny,W*0.1,H*0.07,0.2,0,Math.PI*2); ctx.fill();
-      // Awan putih di tepi
-      for(let i=0;i<8;i++){
-        ctx.beginPath(); ctx.ellipse(Math.random()*W,Math.random()*H,Math.random()*40+10,Math.random()*10+4,Math.random()*Math.PI,0,Math.PI*2);
-        ctx.fillStyle=`rgba(180,210,255,${Math.random()*0.3+0.1})`; ctx.fill();
+      const nx=W*0.42, ny=H*0.44;
+      const gds=ctx.createRadialGradient(nx,ny,0,nx,ny,W*0.09);
+      gds.addColorStop(0,'rgba(0,10,60,0.9)'); gds.addColorStop(0.5,'rgba(0,20,80,0.5)'); gds.addColorStop(1,'rgba(0,20,80,0)');
+      ctx.fillStyle=gds; ctx.beginPath(); ctx.ellipse(nx,ny,W*0.09,H*0.065,-0.2,0,Math.PI*2); ctx.fill();
+      // Tepi GDS cerah
+      ctx.beginPath(); ctx.ellipse(nx,ny,W*0.09,H*0.065,-0.2,0,Math.PI*2);
+      ctx.strokeStyle='rgba(150,200,255,0.4)'; ctx.lineWidth=3; ctx.stroke();
+      // Scooter (awan kecil cepat)
+      for(let i=0;i<5;i++){
+        ctx.beginPath(); ctx.ellipse(Math.random()*W,H*0.5+Math.random()*H*0.1,Math.random()*30+10,6,0,0,Math.PI*2);
+        ctx.fillStyle='rgba(220,235,255,0.5)'; ctx.fill();
       }
+      const hlN=ctx.createRadialGradient(W*0.35,H*0.3,0,W*0.5,H*0.5,W*0.55);
+      hlN.addColorStop(0,'rgba(100,150,255,0.2)'); hlN.addColorStop(1,'rgba(0,0,20,0.55)');
+      ctx.fillStyle=hlN; ctx.fillRect(0,0,W,H);
       break;
     }
   }
 
-  return canvas;
+  return c;
 }
 
 // ================================================================
 // DATA PLANET
 // ================================================================
 const dataPlanet = [
-  { id:0, nama:"Merkurius", urutan:"Planet ke-1", key:"merkurius", warnaBg:"#9e9e9e", warnaGlow:"#bdbdbd", deskripsi:"Planet terkecil dan terdekat dari Matahari. Suhu siang hari bisa mencapai 430°C.", punya_cincin:false },
+  { id:0, nama:"Merkurius", urutan:"Planet ke-1", key:"merkurius", warnaBg:"#9e9e9e", warnaGlow:"#c0c0c0", deskripsi:"Planet terkecil dan terdekat dari Matahari. Suhu siang hari bisa mencapai 430°C.", punya_cincin:false },
   { id:1, nama:"Venus",     urutan:"Planet ke-2", key:"venus",     warnaBg:"#e8c97a", warnaGlow:"#f0d890", deskripsi:"Planet terpanas di tata surya. Suhu rata-rata 465°C akibat efek rumah kaca ekstrem.", punya_cincin:false },
   { id:2, nama:"Bumi",      urutan:"Planet ke-3", key:"bumi",      warnaBg:"#2266cc", warnaGlow:"#4488ff", deskripsi:"Satu-satunya planet berpenghuni. Sekitar 70% permukaannya tertutup air.", punya_cincin:false },
   { id:3, nama:"Mars",      urutan:"Planet ke-4", key:"mars",      warnaBg:"#cc4422", warnaGlow:"#ff6644", deskripsi:"Planet Merah. Punya gunung berapi tertinggi di tata surya, Olympus Mons (21 km).", punya_cincin:false },
@@ -368,20 +523,14 @@ const dataPlanet = [
 ];
 
 let planetDipilih = null;
-// Simpan data URL tekstur tiap planet (dibuat sekali, dipakai berkali-kali)
-const cacheDataURL = {};
+const cacheURL = {};
 
-function dapatkanDataURL(planet) {
-  if (!cacheDataURL[planet.key]) {
-    const canvas = buatTeksturCanvas(planet.key, 512);
-    cacheDataURL[planet.key] = canvas.toDataURL('image/jpeg', 0.92);
-  }
-  return cacheDataURL[planet.key];
+function getDataURL(p) {
+  if (!cacheURL[p.key]) cacheURL[p.key] = buatTekstur(p.key).toDataURL('image/jpeg',0.95);
+  return cacheURL[p.key];
 }
 
-// ================================================================
-// RENDER KARTU PLANET
-// ================================================================
+// Render kartu
 function renderKartu() {
   const grid = document.getElementById('planet-grid');
   dataPlanet.forEach(p => {
@@ -389,26 +538,23 @@ function renderKartu() {
     card.className = 'planet-card';
     card.id = `card-${p.id}`;
     card.onclick = () => pilihPlanet(p.id);
-
-    // Buat canvas kecil sebagai thumbnail (64x64)
-    const thumbCanvas = buatTeksturCanvas(p.key, 64);
-    thumbCanvas.width = 52; thumbCanvas.height = 52;
-    thumbCanvas.title = p.nama;
-
-    card.appendChild(thumbCanvas);
-
-    const nama = document.createElement('strong');
-    nama.textContent = p.nama;
-    const urutan = document.createElement('p');
-    urutan.textContent = p.urutan;
-    card.appendChild(nama);
-    card.appendChild(urutan);
+    // Thumbnail canvas 52x52 bulat
+    const th = buatTekstur(p.key);
+    const tc = document.createElement('canvas');
+    tc.width = 52; tc.height = 52;
+    const tcx = tc.getContext('2d');
+    tcx.save(); tcx.beginPath(); tcx.arc(26,26,26,0,Math.PI*2); tcx.clip();
+    tcx.drawImage(th,0,0,52,52); tcx.restore();
+    card.appendChild(tc);
+    const nama = document.createElement('strong'); nama.textContent = p.nama;
+    const urutan = document.createElement('p'); urutan.textContent = p.urutan;
+    card.appendChild(nama); card.appendChild(urutan);
     grid.appendChild(card);
   });
 }
 
 function pilihPlanet(id) {
-  document.querySelectorAll('.planet-card').forEach(c => c.classList.remove('dipilih'));
+  document.querySelectorAll('.planet-card').forEach(c=>c.classList.remove('dipilih'));
   document.getElementById(`card-${id}`).classList.add('dipilih');
   planetDipilih = id;
   const btn = document.getElementById('btn-mulai-ar');
@@ -417,164 +563,279 @@ function pilihPlanet(id) {
 }
 
 function ke_halaman_marker() {
-  if (planetDipilih === null) return;
-  const planet = dataPlanet[planetDipilih];
-  document.getElementById('halaman-pilih').style.display = 'none';
-  document.getElementById('marker-nama').textContent = planet.nama;
-
-  // Preview planet di halaman marker
-  const previewCanvas = buatTeksturCanvas(planet.key, 90);
-  const ctx = previewCanvas.getContext('2d');
-  // Clip jadi lingkaran
-  const existing = document.getElementById('preview-planet');
-  const newCtx = existing.getContext('2d');
-  newCtx.clearRect(0,0,90,90);
-  newCtx.save();
-  newCtx.beginPath(); newCtx.arc(45,45,45,0,Math.PI*2); newCtx.clip();
-  newCtx.drawImage(previewCanvas,0,0,90,90);
-  newCtx.restore();
-
-  document.getElementById('halaman-marker').style.display = 'block';
+  if (planetDipilih===null) return;
+  const p = dataPlanet[planetDipilih];
+  document.getElementById('halaman-pilih').style.display='none';
+  document.getElementById('marker-nama').textContent = p.nama;
+  // Preview planet bulat di halaman marker
+  const pv = document.getElementById('preview-planet');
+  const pvx = pv.getContext('2d');
+  const src = buatTekstur(p.key);
+  pvx.clearRect(0,0,90,90);
+  pvx.save(); pvx.beginPath(); pvx.arc(45,45,45,0,Math.PI*2); pvx.clip();
+  pvx.drawImage(src,0,0,90,90); pvx.restore();
+  document.getElementById('halaman-marker').style.display='block';
 }
 
 function kembali_ke_pilih() {
-  document.getElementById('halaman-marker').style.display = 'none';
-  document.getElementById('halaman-pilih').style.display = 'block';
+  document.getElementById('halaman-marker').style.display='none';
+  document.getElementById('halaman-pilih').style.display='block';
 }
 
 // ================================================================
-// MULAI AR
+// MULAI AR — Three.js + AR.js langsung
+// Planet BULAT SEMPURNA karena kita kontrol kamera sendiri
 // ================================================================
-function mulaiAR() {
-  if (planetDipilih === null) return;
+let arRenderer=null, arScene=null, arCamera=null, arController=null;
+let planetMesh=null, animId=null;
+
+async function mulaiAR() {
+  if (planetDipilih===null) return;
   const planet = dataPlanet[planetDipilih];
 
-  document.getElementById('halaman-marker').style.display = 'none';
-  document.getElementById('loading-ar').style.display = 'flex';
-  document.getElementById('loading-sub').textContent = `Membuat tekstur ${planet.nama}...`;
+  document.getElementById('halaman-marker').style.display='none';
+  document.getElementById('loading-ar').style.display='flex';
+  document.getElementById('loading-sub').textContent=`Menyiapkan ${planet.nama}...`;
 
-  document.getElementById('ar-tag').textContent = planet.urutan;
-  document.getElementById('ar-nama').textContent = planet.nama;
-  document.getElementById('ar-deskripsi').textContent = planet.deskripsi;
+  // Set info
+  document.getElementById('ar-tag').textContent=planet.urutan;
+  document.getElementById('ar-nama').textContent=planet.nama;
+  document.getElementById('ar-deskripsi').textContent=planet.deskripsi;
 
-  // Buat data URL tekstur resolusi tinggi
-  const dataURL = dapatkanDataURL(planet);
+  // ====== Inisialisasi Three.js renderer ======
+  const canvas = document.getElementById('ar-canvas');
+  arRenderer = new THREE.WebGLRenderer({ canvas, antialias:true, alpha:true });
+  arRenderer.setPixelRatio(window.devicePixelRatio);
+  arRenderer.setSize(window.innerWidth, window.innerHeight);
+  arRenderer.setClearColor(0x000000,0);
 
-  const wrapper = document.getElementById('ar-scene-wrapper');
-  wrapper.innerHTML = '';
+  arScene = new THREE.Scene();
 
-  const cincinHTML = planet.punya_cincin ? `
-    <a-torus position="0 0.5 0" radius="0.65" radius-tubular="0.04"
-      rotation="80 0 0" color="#c8a060" opacity="0.8" segments-tubular="80">
-    </a-torus>
-    <a-torus position="0 0.5 0" radius="0.78" radius-tubular="0.025"
-      rotation="80 0 0" color="#d4b878" opacity="0.55" segments-tubular="80">
-    </a-torus>
-    <a-torus position="0 0.5 0" radius="0.55" radius-tubular="0.02"
-      rotation="80 0 0" color="#b89040" opacity="0.4" segments-tubular="80">
-    </a-torus>
-  ` : '';
+  arCamera = new THREE.Camera();
+  arScene.add(arCamera);
 
-  // Gunakan data URL langsung sebagai src — tidak butuh internet sama sekali
-  const sceneHTML = `
-    <a-scene
-      embedded
-      arjs="sourceType: webcam; debugUIEnabled: false; detectionMode: mono_and_matrix; matrixCodeType: 3x3;"
-      renderer="logarithmicDepthBuffer: true; antialias: true; colorManagement: true;"
-      vr-mode-ui="enabled: false"
-      loading-screen="enabled: false"
-      style="position:absolute;top:0;left:0;width:100%;height:100%;"
-    >
-      <a-assets timeout="10000">
-        <img id="tex-planet" src="${dataURL}"/>
-      </a-assets>
+  // ====== AR.js controller ======
+  try {
+    arController = new THREEx.ArToolkitContext({
+      cameraParametersUrl: 'https://raw.githack.com/AR-js-org/AR.js/master/data/data/camera_para.dat',
+      detectionMode: 'mono',
+    });
 
-      <a-marker preset="hiro" id="marker-hiro"
-        smooth="true" smoothCount="10" smoothTolerance="0.01" smoothThreshold="5">
+    await new Promise((res,rej)=>{
+      arController.init(res);
+      setTimeout(rej, 10000);
+    });
 
-        <!-- Planet dengan tekstur canvas -->
-        <a-sphere
-          position="0 0.5 0"
-          radius="0.45"
-          src="#tex-planet"
-          shader="flat"
-          segments-width="36"
-          segments-height="36"
-          animation="property: rotation; from: 0 0 0; to: 0 360 0; loop: true; dur: 5000; easing: linear"
-        ></a-sphere>
+    arController.getProjectionMatrix && arCamera.projectionMatrix.copy(arController.getProjectionMatrix());
 
-        <!-- Efek cahaya tipis di tepi -->
-        <a-sphere
-          position="0 0.5 0"
-          radius="0.48"
-          color="${planet.warnaBg}"
-          opacity="0.06"
-          shader="flat"
-        ></a-sphere>
+    // Source kamera
+    const arSource = new THREEx.ArToolkitSource({ sourceType:'webcam' });
+    await new Promise((res,rej)=>{
+      arSource.init(()=>{
+        arSource.onResizeElement();
+        arSource.copyElementSizeTo(arRenderer.domElement);
+        res();
+      });
+      setTimeout(rej,8000);
+    });
 
-        <!-- Nama planet -->
-        <a-text value="${planet.nama}" position="0 1.15 0"
-          align="center" color="#f0c040" width="3.5">
-        </a-text>
+    // Marker Hiro
+    const markerRoot = new THREE.Group();
+    arScene.add(markerRoot);
 
-        <!-- Urutan -->
-        <a-text value="${planet.urutan}" position="0 1.42 0"
-          align="center" color="#aabbff" width="2.5">
-        </a-text>
+    const markerControls = new THREEx.ArMarkerControls(arController, markerRoot, {
+      type: 'preset', preset: 'hiro',
+    });
 
-        ${cincinHTML}
+    // ====== Planet 3D ======
+    const texCanvas = buatTekstur(planet.key);
+    const tex = new THREE.CanvasTexture(texCanvas);
+    tex.needsUpdate = true;
 
-      </a-marker>
+    // SphereGeometry bulat sempurna - segments banyak agar halus
+    const geo = new THREE.SphereGeometry(0.8, 64, 64);
+    const mat = new THREE.MeshPhongMaterial({
+      map: tex,
+      shininess: 15,
+      specular: new THREE.Color(0x222222),
+    });
+    planetMesh = new THREE.Mesh(geo, mat);
+    planetMesh.position.set(0, 0.8, 0);
+    markerRoot.add(planetMesh);
 
-      <a-entity camera></a-entity>
-    </a-scene>
-  `;
-
-  wrapper.innerHTML = sceneHTML;
-
-  const cekScene = setInterval(() => {
-    const scene = wrapper.querySelector('a-scene');
-    if (scene && scene.hasLoaded) {
-      clearInterval(cekScene);
-      tampilkanAR();
+    // Cincin Saturnus
+    if (planet.punya_cincin) {
+      const ringGeo = new THREE.RingGeometry(1.1, 1.9, 128);
+      // UV mapping cincin
+      const pos = ringGeo.attributes.position;
+      const uv  = ringGeo.attributes.uv;
+      for(let i=0;i<pos.count;i++){
+        const v = new THREE.Vector3().fromBufferAttribute(pos,i);
+        uv.setXY(i,(v.length()-1.1)/(1.9-1.1),0);
+      }
+      const cincinCanvas = document.createElement('canvas');
+      cincinCanvas.width=256; cincinCanvas.height=4;
+      const cx2=cincinCanvas.getContext('2d');
+      const cg=cx2.createLinearGradient(0,0,256,0);
+      cg.addColorStop(0,'rgba(180,140,60,0)');
+      cg.addColorStop(0.15,'rgba(200,160,80,0.8)');
+      cg.addColorStop(0.4,'rgba(220,180,100,0.6)');
+      cg.addColorStop(0.6,'rgba(180,140,60,0.7)');
+      cg.addColorStop(0.85,'rgba(160,120,40,0.5)');
+      cg.addColorStop(1,'rgba(140,100,30,0)');
+      cx2.fillStyle=cg; cx2.fillRect(0,0,256,4);
+      const cincinTex=new THREE.CanvasTexture(cincinCanvas);
+      const ringMat=new THREE.MeshBasicMaterial({
+        map:cincinTex, side:THREE.DoubleSide, transparent:true, opacity:0.85
+      });
+      const ring=new THREE.Mesh(ringGeo,ringMat);
+      ring.rotation.x=Math.PI/2.2;
+      ring.position.set(0,0.8,0);
+      markerRoot.add(ring);
     }
-  }, 500);
 
-  setTimeout(() => { clearInterval(cekScene); tampilkanAR(); }, 12000);
-}
+    // Cahaya
+    arScene.add(new THREE.AmbientLight(0xffffff,0.6));
+    const sun=new THREE.DirectionalLight(0xffffff,1.2);
+    sun.position.set(5,5,5); arScene.add(sun);
 
-function tampilkanAR() {
-  if (document.getElementById('loading-ar').style.display === 'none') return;
-  document.getElementById('loading-ar').style.display = 'none';
-  document.getElementById('halaman-ar').style.display = 'block';
+    // Teks nama planet (sprite)
+    const labelCanvas=document.createElement('canvas');
+    labelCanvas.width=512; labelCanvas.height=80;
+    const lctx=labelCanvas.getContext('2d');
+    lctx.fillStyle='rgba(0,0,0,0)'; lctx.fillRect(0,0,512,80);
+    lctx.font='bold 48px Arial'; lctx.textAlign='center';
+    lctx.fillStyle='#f0c040'; lctx.fillText(planet.nama,256,55);
+    const labelTex=new THREE.CanvasTexture(labelCanvas);
+    const labelMat=new THREE.SpriteMaterial({map:labelTex,transparent:true});
+    const label=new THREE.Sprite(labelMat);
+    label.position.set(0,1.9,0); label.scale.set(2,0.4,1);
+    markerRoot.add(label);
 
-  const marker = document.getElementById('marker-hiro');
-  if (marker) {
-    marker.addEventListener('markerFound', () => {
-      document.getElementById('panduan-scan').style.display = 'none';
-      document.getElementById('info-planet-ar').style.display = 'block';
-    });
-    marker.addEventListener('markerLost', () => {
-      document.getElementById('panduan-scan').style.display = 'block';
-      document.getElementById('info-planet-ar').style.display = 'none';
-    });
+    // Deteksi marker tampil/hilang
+    let markerVisible=false;
+    const checkMarker=()=>{
+      const isVisible=markerControls.object3d?.visible||markerRoot.visible;
+      if(isVisible!==markerVisible){
+        markerVisible=isVisible;
+        document.getElementById('panduan-scan').style.display=isVisible?'none':'block';
+        document.getElementById('info-planet-ar').style.display=isVisible?'block':'none';
+      }
+    };
+
+    // Render loop
+    const renderLoop=()=>{
+      animId=requestAnimationFrame(renderLoop);
+      arSource.onResizeElement && arSource.onResizeElement();
+      arController.update(arSource.domElement);
+      if(planetMesh) planetMesh.rotation.y+=0.008;
+      checkMarker();
+      arRenderer.render(arScene,arCamera);
+    };
+
+    document.getElementById('loading-ar').style.display='none';
+    canvas.style.display='block';
+    document.getElementById('btn-stop-ar').style.display='block';
+    document.getElementById('panduan-scan').style.display='block';
+    renderLoop();
+
+  } catch(err) {
+    console.error(err);
+    // Fallback ke A-Frame jika THREEx tidak tersedia
+    document.getElementById('loading-ar').style.display='none';
+    mulaiARFallback(planet);
   }
 }
 
+// ================================================================
+// FALLBACK: A-Frame jika Three.js AR gagal
+// ================================================================
+function mulaiARFallback(planet) {
+  const dataURL = getDataURL(planet);
+  const cincinHTML = planet.punya_cincin ? `
+    <a-torus position="0 0.5 0" radius="0.65" radius-tubular="0.035" rotation="80 0 0" color="#c8a060" opacity="0.85" segments-tubular="100"></a-torus>
+    <a-torus position="0 0.5 0" radius="0.80" radius-tubular="0.022" rotation="80 0 0" color="#d4b070" opacity="0.6" segments-tubular="100"></a-torus>
+    <a-torus position="0 0.5 0" radius="0.52" radius-tubular="0.018" rotation="80 0 0" color="#b89040" opacity="0.4" segments-tubular="100"></a-torus>
+  ` : '';
+
+  // Injeksi A-Frame jika belum ada
+  if (!window.AFRAME) {
+    const s1=document.createElement('script'); s1.src='https://aframe.io/releases/1.4.0/aframe.min.js'; document.head.appendChild(s1);
+    const s2=document.createElement('script'); s2.src='https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js'; document.head.appendChild(s2);
+    setTimeout(()=>renderAFrame(planet,dataURL,cincinHTML), 3000);
+  } else {
+    renderAFrame(planet,dataURL,cincinHTML);
+  }
+}
+
+function renderAFrame(planet,dataURL,cincinHTML) {
+  // Buat div wrapper untuk A-Frame
+  const wrapper=document.createElement('div');
+  wrapper.id='aframe-wrapper';
+  wrapper.style.cssText='position:fixed;top:0;left:0;width:100%;height:100%;z-index:5;';
+  wrapper.innerHTML=`
+    <a-scene embedded
+      arjs="sourceType:webcam;debugUIEnabled:false;detectionMode:mono_and_matrix;matrixCodeType:3x3;"
+      renderer="logarithmicDepthBuffer:true;antialias:true;colorManagement:true;physicallyCorrectLights:true;"
+      vr-mode-ui="enabled:false" loading-screen="enabled:false"
+      style="position:absolute;top:0;left:0;width:100%;height:100%;">
+      <a-assets timeout="5000"><img id="tex-p" src="${dataURL}"/></a-assets>
+      <a-marker preset="hiro" id="marker-hiro" smooth="true" smoothCount="15" smoothTolerance="0.005" smoothThreshold="2">
+        <a-sphere position="0 0.5 0" radius="0.45" src="#tex-p" shader="flat"
+          segments-width="64" segments-height="64"
+          animation="property:rotation;from:0 0 0;to:0 360 0;loop:true;dur:6000;easing:linear">
+        </a-sphere>
+        <a-sphere position="0 0.5 0" radius="0.47" color="${planet.warnaBg}" opacity="0.05" shader="flat"></a-sphere>
+        <a-text value="${planet.nama}" position="0 1.15 0" align="center" color="#f0c040" width="3.5"></a-text>
+        <a-text value="${planet.urutan}" position="0 1.42 0" align="center" color="#aabbff" width="2.5"></a-text>
+        ${cincinHTML}
+      </a-marker>
+      <a-entity camera></a-entity>
+    </a-scene>
+  `;
+  document.body.appendChild(wrapper);
+
+  document.getElementById('btn-stop-ar').style.display='block';
+  document.getElementById('panduan-scan').style.display='block';
+
+  setTimeout(()=>{
+    const marker=document.getElementById('marker-hiro');
+    if(marker){
+      marker.addEventListener('markerFound',()=>{
+        document.getElementById('panduan-scan').style.display='none';
+        document.getElementById('info-planet-ar').style.display='block';
+      });
+      marker.addEventListener('markerLost',()=>{
+        document.getElementById('panduan-scan').style.display='block';
+        document.getElementById('info-planet-ar').style.display='none';
+      });
+    }
+  },2000);
+}
+
+// ================================================================
+// STOP AR
+// ================================================================
 function stopAR() {
-  document.querySelectorAll('video').forEach(v => {
-    if (v.srcObject) v.srcObject.getTracks().forEach(t => t.stop());
-  });
-  document.getElementById('ar-scene-wrapper').innerHTML = '';
-  document.getElementById('halaman-ar').style.display = 'none';
-  document.getElementById('panduan-scan').style.display = 'block';
-  document.getElementById('info-planet-ar').style.display = 'none';
-  document.querySelectorAll('.planet-card').forEach(c => c.classList.remove('dipilih'));
-  planetDipilih = null;
-  const btn = document.getElementById('btn-mulai-ar');
-  btn.disabled = true;
-  btn.textContent = 'Pilih planet terlebih dahulu';
-  document.getElementById('halaman-pilih').style.display = 'block';
+  if(animId){cancelAnimationFrame(animId);animId=null;}
+  if(arRenderer){arRenderer.dispose();arRenderer=null;}
+  const canvas=document.getElementById('ar-canvas');
+  canvas.style.display='none';
+  const af=document.getElementById('aframe-wrapper');
+  if(af){
+    document.querySelectorAll('video').forEach(v=>{
+      if(v.srcObject)v.srcObject.getTracks().forEach(t=>t.stop());
+    });
+    af.remove();
+  }
+  document.getElementById('btn-stop-ar').style.display='none';
+  document.getElementById('panduan-scan').style.display='none';
+  document.getElementById('info-planet-ar').style.display='none';
+  document.querySelectorAll('.planet-card').forEach(c=>c.classList.remove('dipilih'));
+  planetDipilih=null;
+  const btn=document.getElementById('btn-mulai-ar');
+  btn.disabled=true; btn.textContent='Pilih planet terlebih dahulu';
+  document.getElementById('halaman-pilih').style.display='block';
 }
 
 renderKartu();
